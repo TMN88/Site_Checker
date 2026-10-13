@@ -36,6 +36,33 @@
 <div class="sc-toolbar"><button class="cbi-button cbi-button-positive" id="sc-save"><%:Сохранить список%></button><button class="cbi-button" id="sc-reset"><%:Сбросить список%></button></div>
 </div>
 </div></div>
+
+<hr style="margin:28px 0">
+<section id="pvf-panel" class="cbi-section">
+ <h2>AWG / Podkop VPN Failover</h2>
+ <p>Управление резервным переключением AmneziaWG для Podkop. После первой установки автоматическое переключение выключено до проверки.</p>
+ <div class="sc-summary">
+  <div class="sc-card"><div class="sc-kicker">Сервис</div><div class="sc-value" style="font-size:1.15em" id="pvf-service">—</div></div>
+  <div class="sc-card"><div class="sc-kicker">Автозапуск</div><div class="sc-value" style="font-size:1.15em" id="pvf-autostart">—</div></div>
+  <div class="sc-card"><div class="sc-kicker">Активный AWG</div><div class="sc-value" style="font-size:1.15em" id="pvf-active">—</div></div>
+  <div class="sc-card"><div class="sc-kicker">Podkop runtime</div><div class="sc-value" style="font-size:1.15em" id="pvf-runtime">—</div></div>
+ </div>
+ <div class="sc-toolbar">
+  <button class="cbi-button cbi-button-action pvf-action" data-action="status">Обновить статус</button>
+  <button class="cbi-button pvf-action" data-action="test">Проверить все AWG</button>
+  <button class="cbi-button pvf-action" data-action="logs">Показать логи</button>
+  <button class="cbi-button pvf-action" data-action="config">Настройки</button>
+ </div>
+ <div class="sc-toolbar">
+  <button class="cbi-button cbi-button-positive pvf-action" data-action="start">Включить автозапуск и запустить</button>
+  <button class="cbi-button pvf-action" data-action="restart">Перезапустить</button>
+  <button class="cbi-button cbi-button-negative pvf-action" data-action="stop">Остановить и отключить автозапуск</button>
+  <span id="pvf-message" role="status" aria-live="polite"></span>
+ </div>
+ <pre id="pvf-output" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:12px;background:rgba(127,127,127,.05)">Нажмите «Обновить статус» для чтения состояния.</pre>
+ <p class="sc-kicker">Выполняются только фиксированные действия. Произвольные shell-команды из браузера не принимаются.</p>
+</section>
+
 <script>
 (function(){
 "use strict";
@@ -84,6 +111,37 @@ $("sc-reset").addEventListener("click",function(){domains=defaults.slice();$("sc
 $("sc-auto").addEventListener("change",function(){if(timer)clearInterval(timer);timer=this.checked?setInterval(check,60000):null});
 load().then(check).catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message);check()});
 timer=setInterval(check,60000);
+
+// AWG / Podkop VPN Failover: only named actions are accepted server-side.
+var pvfBase=base+"/pvf";
+function parsePvfStatus(text){
+ var service=(text.match(/^Service:\\s*(.+)$/m)||[])[1]||"—";
+ var enabled=(text.match(/^Autostart:\\s*(.+)$/m)||[])[1]||"—";
+ var active=(text.match(/^Current Podkop VPN:\\s*(.+)$/m)||[])[1]||"—";
+ var runtime=(text.match(/^Podkop runtime:\\s*(.+)$/m)||[])[1]||"—";
+ $("pvf-service").textContent=service;
+ $("pvf-autostart").textContent=enabled;
+ $("pvf-active").textContent=active;
+ $("pvf-runtime").textContent=runtime;
+}
+function pvfAction(action){
+ var buttons=document.querySelectorAll(".pvf-action");
+ buttons.forEach(function(b){b.disabled=true});
+ $("pvf-message").textContent="Выполняется: "+action+"…";
+ var body=new URLSearchParams();body.set("action",action);
+ fetch(pvfBase,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString(),credentials:"same-origin"})
+ .then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j})})
+ .then(function(d){
+   $("pvf-output").textContent=d.output||"Команда выполнена.";
+   $("pvf-message").textContent="Готово";
+   if(action==="status"||action==="start"||action==="restart"||action==="stop")parsePvfStatus(d.output||"");
+   if(action==="start"||action==="restart"||action==="stop")setTimeout(function(){pvfAction("status")},1200);
+ })
+ .catch(function(e){$("pvf-message").textContent="Ошибка: "+e.message;$("pvf-output").textContent=e.message})
+ .finally(function(){buttons.forEach(function(b){b.disabled=false})});
+}
+document.querySelectorAll(".pvf-action").forEach(function(b){b.addEventListener("click",function(){pvfAction(b.getAttribute("data-action"))})});
+pvfAction("status");
 })();
 </script>
 <%+footer%>
