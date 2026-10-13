@@ -7,7 +7,6 @@ function index()
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
     entry({"admin", "services", "sitecheck", "pvf"}, call("action_pvf")).leaf = true
-    entry({"admin", "services", "sitecheck", "pvf"}, call("action_pvf")).leaf = true
 end
 
 local function defaults()
