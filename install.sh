@@ -1,10 +1,9 @@
 #!/bin/sh
-# Site Checker bootstrap installer for OpenWrt 24.10 / 25.12.
+# Site_Checker bootstrap installer for OpenWrt 24.10 / 25.12.
 set -eu
 
-# Use jsDelivr and pin assets to a known revision. This avoids stale copies
-# returned by some networks for raw.githubusercontent.com.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@3fcf50086e04240ec480563661349220ae425f99"
+# Pin assets to a repository revision to avoid stale raw.githubusercontent.com caches.
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@48c2ab94e50e931d2d940927b562ab57e6e1849f"
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
 HELPER="/usr/libexec/sitecheck-check"
@@ -67,13 +66,12 @@ fetch "$BASE/files/view/index.htm" "$TMP/index.htm" || die "Не удалось 
 fetch "$BASE/files/sitecheck-check" "$TMP/sitecheck-check" || die "Не удалось загрузить проверяющий скрипт."
 fetch "$BASE/files/sitecheck.conf" "$TMP/sitecheck.conf" || die "Не удалось загрузить конфигурацию по умолчанию."
 
-# Fail safely if a proxy/error page was downloaded instead of the expected file.
 [ -s "$TMP/sitecheck.lua" ] || die "Контроллер пустой."
 [ -s "$TMP/index.htm" ] || die "Файл интерфейса пустой."
 [ -s "$TMP/sitecheck-check" ] || die "Проверяющий скрипт пустой."
 [ -s "$TMP/sitecheck.conf" ] || die "Файл конфигурации пустой."
 
-# BusyBox on OpenWrt commonly has cp/chmod but not the GNU install utility.
+# BusyBox commonly lacks GNU install; use cp/chmod instead.
 cp "$TMP/sitecheck.lua" "$CTRL"
 chmod 0644 "$CTRL"
 cp "$TMP/index.htm" "$VIEW"
@@ -90,5 +88,5 @@ fi
 rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
 [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 [ ! -x /etc/init.d/uhttpd ] || /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
-log "Установка завершена. Открой LuCI → Services → Site availability."
+log "Установка завершена. Открой LuCI → Services → Site_Checker."
 log "Для удаления снова запусти install.sh с аргументом --uninstall."
