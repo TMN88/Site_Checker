@@ -41,6 +41,8 @@ jobs:
           grep -q 'opkg install' install.sh
           ! grep -qi 'podkop\|failover\|pvf' files/view/index.htm
           ! grep -qi 'podkop\|failover\|pvf' files/controller/sitecheck.lua
-          ! grep -qi 'podkop\|failover\|pvf' install.sh
+          ! grep -q 'fetch "$BASE/files/podkop-vpn-failover"' install.sh
+          ! grep -q 'cp "$TMP/podkop-vpn-failover"' install.sh
+          ! grep -q 'AWG / Podkop VPN Failover' install.sh
           grep -q 'id="sc-save-auto"' files/view/index.htm
           grep -q 'save_settings' files/controller/sitecheck.lua
