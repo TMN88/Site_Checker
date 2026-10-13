@@ -13,24 +13,26 @@ LuCI-панель для проверки доступности сайтов **
 
 ## Установка
 
-Подключись по SSH к роутеру и выполни от root:
+Подключись по SSH к роутеру и выполни от root. Установщик скачивается через jsDelivr по фиксированному коммиту, чтобы обойти устаревший кэш `raw.githubusercontent.com`:
 
 ```sh
-wget -O- https://raw.githubusercontent.com/TMN88/Site_Checker/main/install.sh | sh
+wget -O /tmp/site-checker-install.sh https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@793ed67833519ddcb64931ec9f40a4f83223b017/install.sh && sh /tmp/site-checker-install.sh
 ```
 
-Если установлен curl:
+Если команда `wget` недоступна, но установлен `curl`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/TMN88/Site_Checker/main/install.sh | sh
+curl -fsSL https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@793ed67833519ddcb64931ec9f40a4f83223b017/install.sh -o /tmp/site-checker-install.sh && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой LuCI → **Services → Site availability**.
 
 ## Удаление
 
+Если файл установщика уже скачан:
+
 ```sh
-wget -O- https://raw.githubusercontent.com/TMN88/Site_Checker/main/install.sh | sh -s -- --uninstall
+sh /tmp/site-checker-install.sh --uninstall
 ```
 
 Удаление сохраняет `/etc/config/sitecheck`. Для удаления конфига вручную удали его после деинсталляции.
