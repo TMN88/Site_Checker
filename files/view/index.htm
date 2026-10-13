@@ -131,7 +131,7 @@ function pvfAction(action){
  buttons.forEach(function(b){b.disabled=true});
  $("pvf-message").textContent="Выполняется: "+action+"…";
  var body=new URLSearchParams();body.set("action",action);
- fetch(pvfBase,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString(),credentials:"same-origin"})
+ fetch(pvfBase,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded","X-LuCI-Auth":authToken},body:body.toString(),credentials:"same-origin"})
  .then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j})})
  .then(function(d){
    $("pvf-output").textContent=d.output||"Команда выполнена.";
