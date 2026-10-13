@@ -44,6 +44,7 @@ fetch() {
 }
 
 remove_app() {
+  cleanup_managed_failover
   rm -f "$CTRL" "$VIEW" "$HELPER"
   rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
   [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
@@ -51,6 +52,23 @@ remove_app() {
   log "Site_Checker удалён; конфигурация $CONF сохранена."
 }
 if [ "${1:-}" = "--uninstall" ]; then remove_app; exit 0; fi
+
+cleanup_managed_failover() {
+  # Remove only the legacy failover component that an older Site_Checker
+  # installer explicitly marked as its own. Never touch an unmarked service.
+  if [ -f /etc/site-checker-pvf-managed ]; then
+    [ ! -x /etc/init.d/podkop-vpn-failover ] || {
+      /etc/init.d/podkop-vpn-failover stop >/dev/null 2>&1 || true
+      /etc/init.d/podkop-vpn-failover disable >/dev/null 2>&1 || true
+    }
+    rm -f /usr/bin/podkop-vpn-failover /usr/bin/podkop-vpn-failover-control
+    rm -f /etc/init.d/podkop-vpn-failover /etc/site-checker-pvf-managed
+    rm -f /usr/share/licenses/Site_Checker/PODKOP-VPN-FAILOVER-LICENSE
+    log "Удалён старый компонент failover, ранее установленный Site_Checker."
+  fi
+}
+
+cleanup_managed_failover
 
 PM=""
 if command -v apk >/dev/null 2>&1; then PM=apk
