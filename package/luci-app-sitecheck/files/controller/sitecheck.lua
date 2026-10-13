@@ -6,6 +6,7 @@ function index()
     entry({"admin", "services", "sitecheck", "check"}, call("action_check")).leaf = true
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
+    entry({"admin", "services", "sitecheck", "pvf"}, call("action_pvf")).leaf = true
 end
 
 local function defaults()
@@ -23,7 +24,9 @@ local function read_domains()
     local uci = require("luci.model.uci").cursor()
     local domains = {}
     uci:foreach("sitecheck", "site", function(s)
-        if s.domain and #s.domain > 0 then domains[#domains + 1] = { name = s.name or s.domain, domain = s.domain } end
+        if s.domain and #s.domain > 0 then
+            domains[#domains + 1] = { name = s.name or s.domain, domain = s.domain }
+        end
     end)
     return #domains > 0 and domains or defaults()
 end
@@ -45,9 +48,12 @@ function action_check()
     local json = require("luci.jsonc")
     local domains = json.parse(http.formvalue("domains") or "[]")
     if type(domains) ~= "table" then
-        http.status(400, "Bad Request"); http.prepare_content("application/json")
-        http.write_json({ error = "Некорректный список доменов" }); return
+        http.status(400, "Bad Request")
+        http.prepare_content("application/json")
+        http.write_json({ error = "Некорректный список доменов" })
+        return
     end
+
     local safe = {}
     for _, item in ipairs(domains) do
         if #safe >= 30 then break end
@@ -55,14 +61,17 @@ function action_check()
             safe[#safe + 1] = { name = tostring(item.name or item.domain):sub(1, 80), domain = item.domain }
         end
     end
+
     local results = {}
     for _, item in ipairs(safe) do
         local pipe = io.popen("/usr/libexec/sitecheck-check " .. string.format("%q", item.domain) .. " 2>/dev/null")
         local output = pipe and pipe:read("*a") or ""
         if pipe then pipe:close() end
         local ok, ms, code = output:match("^(%d+)|(%d+)|(%d+)")
-        results[#results + 1] = { name = item.name, domain = item.domain, ok = ok == "1",
-            latency_ms = tonumber(ms), http_code = tonumber(code) }
+        results[#results + 1] = {
+            name = item.name, domain = item.domain, ok = ok == "1",
+            latency_ms = tonumber(ms), http_code = tonumber(code)
+        }
     end
     http.prepare_content("application/json")
     http.write_json({ results = results, checked_at = os.date("%Y-%m-%d %H:%M:%S") })
@@ -73,9 +82,12 @@ function action_save_config()
     local json = require("luci.jsonc")
     local domains = json.parse(http.formvalue("domains") or "[]")
     if type(domains) ~= "table" or #domains < 1 or #domains > 30 then
-        http.status(400, "Bad Request"); http.prepare_content("application/json")
-        http.write_json({ error = "Нужен список от 1 до 30 сайтов" }); return
+        http.status(400, "Bad Request")
+        http.prepare_content("application/json")
+        http.write_json({ error = "Нужен список от 1 до 30 сайтов" })
+        return
     end
+
     local cleaned = {}
     for _, item in ipairs(domains) do
         if type(item) == "table" and type(item.name) == "string" and valid_url(item.domain) then
@@ -83,9 +95,12 @@ function action_save_config()
         end
     end
     if #cleaned == 0 then
-        http.status(400, "Bad Request"); http.prepare_content("application/json")
-        http.write_json({ error = "Не найдено корректных URL" }); return
+        http.status(400, "Bad Request")
+        http.prepare_content("application/json")
+        http.write_json({ error = "Не найдено корректных URL" })
+        return
     end
+
     local uci = require("luci.model.uci").cursor()
     uci:delete_all("sitecheck", "site")
     for _, item in ipairs(cleaned) do
@@ -93,7 +108,47 @@ function action_save_config()
         uci:set("sitecheck", section, "name", item.name)
         uci:set("sitecheck", section, "domain", item.domain)
     end
-    uci:save("sitecheck"); uci:commit("sitecheck")
+    uci:save("sitecheck")
+    uci:commit("sitecheck")
     http.prepare_content("application/json")
     http.write_json({ ok = true, count = #cleaned })
+end
+
+local pvf_actions = {
+    status = { "/usr/bin/podkop-vpn-failover", "status" },
+    test = { "/usr/bin/podkop-vpn-failover", "test" },
+    logs = { "/usr/bin/podkop-vpn-failover", "logs" },
+    config = { "/usr/bin/podkop-vpn-failover", "config" },
+    version = { "/usr/bin/podkop-vpn-failover", "version" },
+    start = { "/usr/bin/podkop-vpn-failover-control", "start" },
+    restart = { "/usr/bin/podkop-vpn-failover-control", "restart" },
+    stop = { "/usr/bin/podkop-vpn-failover-control", "stop" }
+}
+
+local function run_pvf(action)
+    local command = pvf_actions[action]
+    if not command then return nil, "Недопустимая команда" end
+    if not nixio.fs.access(command[1], "x") then
+        return nil, "Компонент podkop-vpn-failover не установлен. Переустановите Site_Checker обновлённым установщиком."
+    end
+    local pipe = io.popen(string.format("%q %q 2>&1", command[1], command[2]))
+    if not pipe then return nil, "Не удалось запустить команду управления" end
+    local output = pipe:read("*a") or ""
+    local ok, why, code = pipe:close()
+    if #output > 12000 then output = output:sub(1, 12000) .. "\\n[вывод сокращён]" end
+    if not ok then return nil, output ~= "" and output or ("Команда завершилась с ошибкой (" .. tostring(code or why) .. ")") end
+    return output
+end
+
+function action_pvf()
+    local http = require("luci.http")
+    local action = http.formvalue("action") or ""
+    local output, err = run_pvf(action)
+    http.prepare_content("application/json")
+    if not output then
+        http.status(400, "Bad Request")
+        http.write_json({ ok = false, error = err })
+        return
+    end
+    http.write_json({ ok = true, action = action, output = output })
 end
