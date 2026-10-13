@@ -2,9 +2,9 @@
 # Site Checker bootstrap installer for OpenWrt 24.10 / 25.12.
 set -eu
 
-# Use jsDelivr instead of raw.githubusercontent.com: some networks/proxies
-# return a stale copy of raw files even when the repository has been updated.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@main"
+# Use jsDelivr and pin assets to a known revision. This avoids stale copies
+# returned by some networks for raw.githubusercontent.com.
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@3fcf50086e04240ec480563661349220ae425f99"
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
 HELPER="/usr/libexec/sitecheck-check"
