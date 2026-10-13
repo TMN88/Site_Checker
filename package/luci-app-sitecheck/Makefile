@@ -1,9 +1,9 @@
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=LuCI Site Availability Checker
+LUCI_TITLE:=LuCI Site_Checker with Podkop AWG Failover
 LUCI_DEPENDS:=+luci-base +curl
 PKG_NAME:=luci-app-sitecheck
-PKG_VERSION:=1.1.0
+PKG_VERSION:=1.2.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -18,7 +18,7 @@ define Package/luci-app-sitecheck
 endef
 
 define Package/luci-app-sitecheck/description
-LuCI page to check website reachability from the OpenWrt router.
+LuCI website checker with fixed allowlisted controls for Podkop AmneziaWG VPN failover.
 endef
 
 define Build/Compile
