@@ -1,0 +1,33 @@
+name: Validate Site_Checker sources
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shell-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: |
+          set -eu
+          for file in install.sh files/sitecheck-check files/podkop-vpn-failover files/podkop-vpn-failover-control files/podkop-vpn-failover.init; do
+            sh -n "$file"
+          done
+      - name: Verify package source mirrors
+        run: |
+          set -eu
+          for file in controller/sitecheck.lua view/index.htm sitecheck-check sitecheck.conf podkop-vpn-failover podkop-vpn-failover-control podkop-vpn-failover.init PODKOP-VPN-FAILOVER-LICENSE; do
+            cmp "files/$file" "package/luci-app-sitecheck/files/$file"
+          done
+      - name: Verify installer safeguards and UI actions
+        run: |
+          set -eu
+          ! grep -q 'install -m' install.sh
+          grep -q 'apk add' install.sh
+          grep -q 'opkg install' install.sh
+          grep -q 'id="pvf-panel"' files/view/index.htm
+          grep -q 'local pvf_actions' files/controller/sitecheck.lua
+          grep -q 'action_pvf' files/controller/sitecheck.lua
