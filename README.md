@@ -32,7 +32,7 @@ wget -O /tmp/site-checker-install.sh https://cdn.jsdelivr.net/gh/TMN88/Site_Chec
 Если установлен `curl`, можно скачать установщик так:
 
 ```sh
-curl -fsSL https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@1853477d79172614d882d267c463fa865b061ed3/install.sh -o /tmp/site-checker-install.sh && sh /tmp/site-checker-install.sh
+curl -fsSL https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@ae7dd111e323a1aac47bc2e34b7e32100c3fb68f/install.sh -o /tmp/site-checker-install.sh && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой **LuCI → Services → Site_Checker**.
