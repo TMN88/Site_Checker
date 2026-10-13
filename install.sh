@@ -63,11 +63,16 @@ fetch "$BASE/files/view/index.htm" "$TMP/index.htm" || die "Не удалось 
 fetch "$BASE/files/sitecheck-check" "$TMP/sitecheck-check" || die "Не удалось загрузить проверяющий скрипт."
 fetch "$BASE/files/sitecheck.conf" "$TMP/sitecheck.conf" || die "Не удалось загрузить конфигурацию по умолчанию."
 
-install -m 0644 "$TMP/sitecheck.lua" "$CTRL"
-install -m 0644 "$TMP/index.htm" "$VIEW"
-install -m 0755 "$TMP/sitecheck-check" "$HELPER"
+# BusyBox on OpenWrt commonly has cp/chmod but not the GNU install utility.
+cp "$TMP/sitecheck.lua" "$CTRL"
+chmod 0644 "$CTRL"
+cp "$TMP/index.htm" "$VIEW"
+chmod 0644 "$VIEW"
+cp "$TMP/sitecheck-check" "$HELPER"
+chmod 0755 "$HELPER"
 if [ ! -f "$CONF" ]; then
-  install -m 0644 "$TMP/sitecheck.conf" "$CONF"
+  cp "$TMP/sitecheck.conf" "$CONF"
+  chmod 0644 "$CONF"
 else
   log "Существующий $CONF не изменён."
 fi
