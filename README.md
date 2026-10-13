@@ -12,8 +12,10 @@ LuCI-панель для проверки доступности сайтов н
 
 ## Поддерживаемые версии OpenWrt
 
-- **OpenWrt 24.x** — установщик использует `opkg`.
-- **OpenWrt 25.x** — установщик использует `apk`.
+- **OpenWrt 24.10.x** — установщик использует `opkg`.
+- **OpenWrt 25.12.x** — установщик использует `apk`.
+
+Это официальные стабильные ветки OpenWrt 24 и 25. Установщик выбирает пакетный менеджер по номеру версии и проверяет наличие соответствующей команды. Работа на кастомных сборках, snapshot-образах и всех устройствах отдельно не подтверждена.
 
 Установщик автоматически выбирает пакетный менеджер и устанавливает необходимые зависимости. Совместимость зависит от конкретной сборки OpenWrt и состава LuCI.
 
@@ -22,7 +24,7 @@ LuCI-панель для проверки доступности сайтов н
 Выполни по SSH от `root`:
 
 ```sh
-wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@b180e8fdd6ee29c9ba5025530098e7cd33c42b2c/install.sh' && sh /tmp/site-checker-install.sh
+wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@5a7929065d7b65acd8b35f2b7ae31222385a85ae/install.sh' && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой **LuCI → Services → Site_Checker**.
