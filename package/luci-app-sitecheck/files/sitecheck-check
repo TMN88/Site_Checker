@@ -1,0 +1,19 @@
+#!/bin/sh
+URL="$1"
+case "$URL" in http://*|https://*) ;; *) echo "0|0|0"; exit 0 ;; esac
+if command -v curl >/dev/null 2>&1; then
+    RESULT="$(curl -L -sS -o /dev/null --connect-timeout 4 --max-time 8 -w '%{http_code}|%{time_total}' "$URL" 2>/dev/null)"
+    RC=$?; CODE="${RESULT%%|*}"; SEC="${RESULT#*|}"
+    case "$SEC" in *'|'*|'') SEC=0 ;; esac
+    MS="$(awk -v s="$SEC" 'BEGIN { printf "%d", s * 1000 }' 2>/dev/null)"; [ -n "$MS" ] || MS=0
+    case "$CODE" in ''|*[!0-9]*) CODE=0 ;; esac
+    if [ "$RC" -eq 0 ] && [ "$CODE" -ge 200 ] && [ "$CODE" -lt 400 ]; then echo "1|$MS|$CODE"; else echo "0|$MS|$CODE"; fi
+    exit 0
+fi
+START="$(date +%s)"
+if command -v uclient-fetch >/dev/null 2>&1; then uclient-fetch -q -T 8 -O /dev/null "$URL" >/dev/null 2>&1 && OK=1 || OK=0
+elif command -v wget >/dev/null 2>&1; then wget -q -T 8 -O /dev/null "$URL" >/dev/null 2>&1 && OK=1 || OK=0
+else echo "0|0|0"; exit 0; fi
+END="$(date +%s)"; MS=$(( (END - START) * 1000 )); [ "$MS" -lt 0 ] && MS=0
+[ "$OK" -eq 1 ] && CODE=200 || CODE=0
+echo "$OK|$MS|$CODE"
