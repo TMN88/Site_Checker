@@ -70,7 +70,7 @@ else die "Не найден менеджер пакетов apk или opkg."; f
 if [ "$PM" = apk ]; then
   MISSING=""
   for pkg in luci-base curl; do
-    if ! apk info -e "$pkg" >/dev/null 2>&1; then MISSING="$MISSING $pkg"; fi
+    if ! apk info 2>/dev/null | grep -Fxq "$pkg"; then MISSING="$MISSING $pkg"; fi
   done
   if [ -n "$MISSING" ]; then
     log "Обновление списка пакетов apk."
