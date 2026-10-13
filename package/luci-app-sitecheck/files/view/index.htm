@@ -22,7 +22,8 @@
 <div class="sc-toolbar">
  <button class="cbi-button cbi-button-action" id="sc-run"><%:Проверить сейчас%></button>
  <button class="cbi-button" id="sc-toggle"><%:Настроить сайты%></button>
- <label><input type="checkbox" id="sc-auto" checked> <%:Автообновление каждые 60 секунд%></label>
+ <label><input type="checkbox" id="sc-auto"> <%:Автообновление каждые 60 секунд%></label>
+ <button class="cbi-button" id="sc-save-auto"><%:Сохранить параметр%></button>
  <span id="sc-message"></span>
 </div>
 <div class="cbi-section"><table class="sc-table">
@@ -100,7 +101,8 @@ function check(){
  .catch(function(e){msg("Ошибка: "+e.message)})
  .finally(function(){busy=false;$("sc-run").disabled=false});
 }
-function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2)})}
+function setAutoRefresh(enabled){if(timer)clearInterval(timer);timer=enabled?setInterval(check,60000):null}
+function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);$("sc-auto").checked=d.auto_refresh===true||d.auto_refresh==="1";setAutoRefresh($("sc-auto").checked)})}
 $("sc-run").addEventListener("click",check);
 $("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
 $("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.parse($("sc-editor").value)}catch(e){msg("Ошибка JSON: "+e.message);return}
@@ -108,9 +110,8 @@ $("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.pars
  req("save_config",{domains:JSON.stringify(parsed)}).then(function(){domains=parsed;msg("Сохранено");check()}).catch(function(e){msg("Ошибка сохранения: "+e.message)});
 });
 $("sc-reset").addEventListener("click",function(){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Нажмите «Сохранить список» для применения")});
-$("sc-auto").addEventListener("change",function(){if(timer)clearInterval(timer);timer=this.checked?setInterval(check,60000):null});
+$("sc-save-auto").addEventListener("click",function(){var enabled=$("sc-auto").checked;req("save_settings",{auto_refresh:enabled?"1":"0"}).then(function(){setAutoRefresh(enabled);msg(enabled?"Автообновление включено и сохранено":"Автообновление выключено и сохранено")}).catch(function(e){msg("Ошибка сохранения параметра: "+e.message)})});
 load().then(check).catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message);check()});
-timer=setInterval(check,60000);
 
 // AWG / Podkop VPN Failover: only named actions are accepted server-side.
 var pvfBase=base+"/pvf";
