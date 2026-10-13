@@ -38,6 +38,8 @@ define Package/luci-app-sitecheck/install
 	$(INSTALL_BIN) ./files/podkop-vpn-failover-control $(1)/usr/bin/podkop-vpn-failover-control
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/podkop-vpn-failover.init $(1)/etc/init.d/podkop-vpn-failover
+	$(INSTALL_DIR) $(1)/usr/share/licenses/luci-app-sitecheck
+	$(INSTALL_DATA) ./files/PODKOP-VPN-FAILOVER-LICENSE $(1)/usr/share/licenses/luci-app-sitecheck/PODKOP-VPN-FAILOVER-LICENSE
 endef
 
 $(eval $(call BuildPackage,luci-app-sitecheck))
