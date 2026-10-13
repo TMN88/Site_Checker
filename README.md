@@ -1,10 +1,10 @@
-# Site Checker для OpenWrt
+# Site_Checker для OpenWrt
 
 LuCI-панель для проверки доступности сайтов **с самого роутера OpenWrt**, а не из браузера. Проект вдохновлён практическим подходом к проверке URL из [StressOzz/Zapret-Manager](https://github.com/StressOzz/Zapret-Manager), но реализован как отдельная LuCI-панель.
 
 ## Возможности
 
-- Раздел LuCI: **Services → Site availability** (Доступность сайтов).
+- Раздел LuCI: **Services → Site_Checker**.
 - Проверка HTTP/HTTPS с роутера с учётом его DNS, маршрутизации и сетевых правил.
 - Отображение статуса, задержки и HTTP-кода (реальные миллисекунды и HTTP-код при наличии `curl`; иначе доступен упрощённый fallback).
 - Автообновление каждые 60 секунд.
@@ -13,19 +13,19 @@ LuCI-панель для проверки доступности сайтов **
 
 ## Установка
 
-Подключись по SSH к роутеру и выполни от root. Установщик скачивается через jsDelivr по фиксированному коммиту, чтобы обойти устаревший кэш `raw.githubusercontent.com`:
+Подключись по SSH к роутеру и выполни от root. Установщик загружается через jsDelivr по зафиксированной версии, чтобы избежать устаревшего кэша `raw.githubusercontent.com`:
 
 ```sh
-wget -O /tmp/site-checker-install.sh https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@793ed67833519ddcb64931ec9f40a4f83223b017/install.sh && sh /tmp/site-checker-install.sh
+wget -O /tmp/site-checker-install.sh https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@fb92f4bc87a7879543f954ded6bbb7ce3f84c45a/install.sh && sh /tmp/site-checker-install.sh
 ```
 
 Если команда `wget` недоступна, но установлен `curl`:
 
 ```sh
-curl -fsSL https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@793ed67833519ddcb64931ec9f40a4f83223b017/install.sh -o /tmp/site-checker-install.sh && sh /tmp/site-checker-install.sh
+curl -fsSL https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@fb92f4bc87a7879543f954ded6bbb7ce3f84c45a/install.sh -o /tmp/site-checker-install.sh && sh /tmp/site-checker-install.sh
 ```
 
-После установки открой LuCI → **Services → Site availability**.
+После установки открой LuCI → **Services → Site_Checker**.
 
 ## Удаление
 
