@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 
-LUCI_TITLE:=LuCI Site_Checker with Podkop AWG Failover
+LUCI_TITLE:=LuCI Site_Checker
 LUCI_DEPENDS:=+luci-base +curl
 PKG_NAME:=luci-app-sitecheck
 PKG_VERSION:=1.2.0
@@ -18,7 +18,7 @@ define Package/luci-app-sitecheck
 endef
 
 define Package/luci-app-sitecheck/description
-LuCI website checker with fixed allowlisted controls for Podkop AmneziaWG VPN failover.
+LuCI website checker for OpenWrt.
 endef
 
 define Build/Compile
@@ -33,13 +33,6 @@ define Package/luci-app-sitecheck/install
 	$(INSTALL_BIN) ./files/sitecheck-check $(1)/usr/libexec/sitecheck-check
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/sitecheck.conf $(1)/etc/config/sitecheck
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) ./files/podkop-vpn-failover $(1)/usr/bin/podkop-vpn-failover
-	$(INSTALL_BIN) ./files/podkop-vpn-failover-control $(1)/usr/bin/podkop-vpn-failover-control
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/podkop-vpn-failover.init $(1)/etc/init.d/podkop-vpn-failover
-	$(INSTALL_DIR) $(1)/usr/share/licenses/luci-app-sitecheck
-	$(INSTALL_DATA) ./files/PODKOP-VPN-FAILOVER-LICENSE $(1)/usr/share/licenses/luci-app-sitecheck/PODKOP-VPN-FAILOVER-LICENSE
 endef
 
 $(eval $(call BuildPackage,luci-app-sitecheck))
