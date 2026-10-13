@@ -2,7 +2,7 @@ module("luci.controller.sitecheck", package.seeall)
 
 function index()
     if not nixio.fs.access("/usr/libexec/sitecheck-check") then return end
-    entry({"admin", "services", "sitecheck"}, template("sitecheck/index"), _("Site availability"), 85).dependent = true
+    entry({"admin", "services", "sitecheck"}, template("sitecheck/index"), _("Site_Checker"), 85).dependent = true
     entry({"admin", "services", "sitecheck", "check"}, call("action_check")).leaf = true
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
