@@ -66,7 +66,7 @@
 <script>
 (function(){
 "use strict";
-var base="<%=url('admin/services/sitecheck')%>",domains=[],busy=false,timer=null;
+var base="<%=url('admin/services/sitecheck')%>",authToken="<%=token%>",domains=[],busy=false,timer=null;
 var defaults=[
  {name:"YouTube",domain:"https://www.youtube.com/"},
  {name:"WhatsApp",domain:"https://web.whatsapp.com/"},
@@ -79,7 +79,7 @@ function $(id){return document.getElementById(id)}
 function msg(s){$("sc-message").textContent=s||""}
 function req(path,data){
  var body=new URLSearchParams();Object.keys(data||{}).forEach(function(k){body.set(k,data[k])});
- return fetch(base+"/"+path,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString(),credentials:"same-origin"})
+ return fetch(base+"/"+path,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded","X-LuCI-Auth":authToken},body:body.toString(),credentials:"same-origin"})
  .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j})});
 }
 function render(results,at){
@@ -115,16 +115,18 @@ timer=setInterval(check,60000);
 // AWG / Podkop VPN Failover: only named actions are accepted server-side.
 var pvfBase=base+"/pvf";
 function parsePvfStatus(text){
- var service=(text.match(/^Service:\\s*(.+)$/m)||[])[1]||"—";
- var enabled=(text.match(/^Autostart:\\s*(.+)$/m)||[])[1]||"—";
- var active=(text.match(/^Current Podkop VPN:\\s*(.+)$/m)||[])[1]||"—";
- var runtime=(text.match(/^Podkop runtime:\\s*(.+)$/m)||[])[1]||"—";
+ var service=(text.match(/^Service:\s*(.+)$/m)||[])[1]||"—";
+ var enabled=(text.match(/^Autostart:\s*(.+)$/m)||[])[1]||"—";
+ var active=(text.match(/^Current Podkop VPN:\s*(.+)$/m)||[])[1]||"—";
+ var runtime=(text.match(/^Podkop runtime:\s*(.+)$/m)||[])[1]||"—";
  $("pvf-service").textContent=service;
  $("pvf-autostart").textContent=enabled;
  $("pvf-active").textContent=active;
  $("pvf-runtime").textContent=runtime;
 }
 function pvfAction(action){
+ if(action==="start"&&!window.confirm("Включить автозапуск AWG failover? После startup grace сервис сможет переключать Podkop на резервный AWG автоматически."))return;
+ if(action==="stop"&&!window.confirm("Остановить AWG failover и отключить его автозапуск?"))return;
  var buttons=document.querySelectorAll(".pvf-action");
  buttons.forEach(function(b){b.disabled=true});
  $("pvf-message").textContent="Выполняется: "+action+"…";
