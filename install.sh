@@ -2,7 +2,9 @@
 # Site Checker bootstrap installer for OpenWrt 24.10 / 25.12.
 set -eu
 
-BASE="https://raw.githubusercontent.com/TMN88/Site_Checker/main"
+# Use jsDelivr instead of raw.githubusercontent.com: some networks/proxies
+# return a stale copy of raw files even when the repository has been updated.
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@main"
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
 HELPER="/usr/libexec/sitecheck-check"
@@ -17,16 +19,16 @@ die() { log "ОШИБКА: $*" >&2; exit 1; }
 . /etc/openwrt_release
 REL="${DISTRIB_RELEASE:-unknown}"
 log "OpenWrt $REL; target: ${DISTRIB_TARGET:-unknown}; arch: ${DISTRIB_ARCH:-unknown}"
-case "$REL" in 24.10*|25.12*) ;; *) log "Предупреждение: проверялась подготовка для 24.10/25.12; совместимость этой версии не подтверждена." ;; esac
+case "$REL" in 24.10*|25.12*) ;; *) log "Предупреждение: совместимость с этой версией OpenWrt не подтверждена." ;; esac
 
 fetch() {
   url="$1"; out="$2"
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$out"
+  if command -v uclient-fetch >/dev/null 2>&1; then
+    uclient-fetch -q -T 60 -O "$out" "$url"
   elif command -v wget >/dev/null 2>&1; then
     wget -q -T 60 -O "$out" "$url"
-  elif command -v uclient-fetch >/dev/null 2>&1; then
-    uclient-fetch -q -T 60 -O "$out" "$url"
+  elif command -v curl >/dev/null 2>&1; then
+    curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$out"
   else
     die "Не найден curl, wget или uclient-fetch для скачивания файлов."
   fi
@@ -50,7 +52,9 @@ mkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck /u
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 
 if [ "$PM" = apk ]; then
-  if ! apk info -e luci-base >/dev/null 2>&1; then apk add luci-base || die "Не удалось установить luci-base."; fi
+  if ! apk info -e luci-base >/dev/null 2>&1; then
+    apk add luci-base || die "Не удалось установить luci-base."
+  fi
 else
   if ! opkg status luci-base 2>/dev/null | grep -q '^Status:.* installed'; then
     opkg update
@@ -62,6 +66,12 @@ fetch "$BASE/files/controller/sitecheck.lua" "$TMP/sitecheck.lua" || die "Не �
 fetch "$BASE/files/view/index.htm" "$TMP/index.htm" || die "Не удалось загрузить интерфейс."
 fetch "$BASE/files/sitecheck-check" "$TMP/sitecheck-check" || die "Не удалось загрузить проверяющий скрипт."
 fetch "$BASE/files/sitecheck.conf" "$TMP/sitecheck.conf" || die "Не удалось загрузить конфигурацию по умолчанию."
+
+# Fail safely if a proxy/error page was downloaded instead of the expected file.
+[ -s "$TMP/sitecheck.lua" ] || die "Контроллер пустой."
+[ -s "$TMP/index.htm" ] || die "Файл интерфейса пустой."
+[ -s "$TMP/sitecheck-check" ] || die "Проверяющий скрипт пустой."
+[ -s "$TMP/sitecheck.conf" ] || die "Файл конфигурации пустой."
 
 # BusyBox on OpenWrt commonly has cp/chmod but not the GNU install utility.
 cp "$TMP/sitecheck.lua" "$CTRL"
