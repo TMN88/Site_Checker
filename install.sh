@@ -4,7 +4,7 @@ set -eu
 
 # Pinned source revision, deliberately using jsDelivr rather than raw.githubusercontent.com
 # because some routers/networks have returned stale cached raw files.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@99b31ad5958434ef7a5b42ee1e417a0110887c20"
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@442b842e360d9f948a62248dc1e45d254a3fdf12"
 
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
@@ -21,8 +21,9 @@ die() { log "ОШИБКА: $*" >&2; exit 1; }
 REL="${DISTRIB_RELEASE:-unknown}"
 log "OpenWrt $REL; target: ${DISTRIB_TARGET:-unknown}; arch: ${DISTRIB_ARCH:-unknown}"
 case "$REL" in
-  24|24.*|25|25.*) ;;
-  *) log "Предупреждение: скрипт предназначен для веток OpenWrt 24.x и 25.x; совместимость с $REL не подтверждена." ;;
+  24|24.*) PM="opkg" ;;
+  25|25.*) PM="apk" ;;
+  *) PM="" ; log "Предупреждение: скрипт предназначен для OpenWrt 24.10.x (opkg) и 25.12.x (apk); совместимость с $REL не подтверждена." ;;
 esac
 
 fetch() {
@@ -41,6 +42,21 @@ fetch() {
   fi
   rm -f "$out"
   return 1
+}
+
+cleanup_managed_failover() {
+  # Remove only the legacy component explicitly marked as installed by
+  # an older Site_Checker installer; leave unmarked services untouched.
+  if [ -f /etc/site-checker-pvf-managed ]; then
+    [ ! -x /etc/init.d/podkop-vpn-failover ] || {
+      /etc/init.d/podkop-vpn-failover stop >/dev/null 2>&1 || true
+      /etc/init.d/podkop-vpn-failover disable >/dev/null 2>&1 || true
+    }
+    rm -f /usr/bin/podkop-vpn-failover /usr/bin/podkop-vpn-failover-control
+    rm -f /etc/init.d/podkop-vpn-failover /etc/site-checker-pvf-managed
+    rm -f /usr/share/licenses/Site_Checker/PODKOP-VPN-FAILOVER-LICENSE
+    log "Удалены компоненты устаревшей интеграции из предыдущей версии Site_Checker."
+  fi
 }
 
 remove_app() {
@@ -70,13 +86,16 @@ cleanup_managed_failover() {
 
 cleanup_managed_failover
 
-PM=""
-if command -v apk >/dev/null 2>&1; then PM=apk
-elif command -v opkg >/dev/null 2>&1; then PM=opkg
-else die "Не найден менеджер пакетов apk или opkg."; fi
+if [ "$PM" = "apk" ] && ! command -v apk >/dev/null 2>&1; then die "Для OpenWrt 25.x не найден apk."; fi
+if [ "$PM" = "opkg" ] && ! command -v opkg >/dev/null 2>&1; then die "Для OpenWrt 24.x не найден opkg."; fi
+if [ -z "$PM" ]; then
+  if command -v apk >/dev/null 2>&1; then PM=apk
+  elif command -v opkg >/dev/null 2>&1; then PM=opkg
+  else die "Не найден менеджер пакетов apk или opkg."; fi
+fi
 
 # Install dependencies with the package manager native to this OpenWrt branch
-# (apk for 25.12+, opkg for 24.10).
+# (apk for OpenWrt 25.12+, opkg for OpenWrt 24.10).
 if [ "$PM" = apk ]; then
   MISSING=""
   for pkg in luci-base curl; do
@@ -127,7 +146,6 @@ if [ ! -f "$CONF" ]; then
 else
   log "Существующий $CONF сохранён без изменений."
 fi
-
 
 rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
 [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
