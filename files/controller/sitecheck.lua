@@ -6,6 +6,7 @@ function index()
     entry({"admin", "services", "sitecheck", "check"}, call("action_check")).leaf = true
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
+    entry({"admin", "services", "sitecheck", "save_settings"}, call("action_save_settings")).leaf = true
     entry({"admin", "services", "sitecheck", "pvf"}, call("action_pvf")).leaf = true
 end
 
@@ -33,8 +34,23 @@ end
 
 function action_get_config()
     local http = require("luci.http")
+    local uci = require("luci.model.uci").cursor()
     http.prepare_content("application/json")
-    http.write_json({ domains = read_domains() })
+    http.write_json({
+        domains = read_domains(),
+        auto_refresh = uci:get("sitecheck", "settings", "auto_refresh") == "1"
+    })
+end
+
+function action_save_settings()
+    local http = require("luci.http")
+    local uci = require("luci.model.uci").cursor()
+    local enabled = http.formvalue("auto_refresh") == "1" and "1" or "0"
+    uci:set("sitecheck", "settings", "auto_refresh", enabled)
+    uci:save("sitecheck")
+    uci:commit("sitecheck")
+    http.prepare_content("application/json")
+    http.write_json({ ok = true, auto_refresh = enabled == "1" })
 end
 
 local function valid_url(url)
