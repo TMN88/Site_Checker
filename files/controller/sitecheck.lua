@@ -7,7 +7,6 @@ function index()
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_settings"}, call("action_save_settings")).leaf = true
-    entry({"admin", "services", "sitecheck", "pvf"}, call("action_pvf")).leaf = true
 end
 
 local function defaults()
@@ -130,53 +129,3 @@ function action_save_config()
     http.write_json({ ok = true, count = #cleaned })
 end
 
--- AWG failover commands are allowlisted. Never accept a shell command from HTTP.
-local pvf_actions = {
-    status = { "/usr/bin/podkop-vpn-failover", "status" },
-    test = { "/usr/bin/podkop-vpn-failover", "test" },
-    logs = { "/usr/bin/podkop-vpn-failover", "logs" },
-    config = { "/usr/bin/podkop-vpn-failover", "config" },
-    version = { "/usr/bin/podkop-vpn-failover", "version" },
-    start = { "/usr/bin/podkop-vpn-failover-control", "start" },
-    restart = { "/usr/bin/podkop-vpn-failover-control", "restart" },
-    stop = { "/usr/bin/podkop-vpn-failover-control", "stop" }
-}
-
-local function run_pvf(action)
-    local command = pvf_actions[action]
-    if not command then return nil, "Недопустимая команда" end
-    if not nixio.fs.access(command[1]) then
-        return nil, "Файл " .. command[1] .. " не найден. Переустановите Site_Checker."
-    end
-    if (action == "start" or action == "restart") and
-       (not nixio.fs.access("/etc/init.d/podkop") or not nixio.fs.access("/etc/init.d/sing-box")) then
-        return nil, "Для управления failover нужны установленные Podkop и sing-box."
-    end
-
-    local pipe = io.popen(string.format("%q %q 2>&1", command[1], command[2]))
-    if not pipe then return nil, "Не удалось запустить команду управления" end
-    local output = pipe:read("*a") or ""
-    local ok, why, code = pipe:close()
-
-    if #output > 12000 then output = output:sub(1, 12000) .. "\n[вывод сокращён]" end
-    if action == "logs" and output == "" then
-        return "Записей failover пока нет."
-    end
-    if not ok then
-        return nil, output ~= "" and output or ("Команда завершилась с ошибкой (" .. tostring(code or why) .. ")")
-    end
-    return output
-end
-
-function action_pvf()
-    local http = require("luci.http")
-    local action = http.formvalue("action") or ""
-    local output, err = run_pvf(action)
-    http.prepare_content("application/json")
-    if not output then
-        http.status(400, "Bad Request")
-        http.write_json({ ok = false, error = err })
-        return
-    end
-    http.write_json({ ok = true, action = action, output = output })
-end
