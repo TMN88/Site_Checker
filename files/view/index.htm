@@ -1,0 +1,89 @@
+<%+header%>
+<style>
+.sc-wrap{max-width:1100px}.sc-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0}
+.sc-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:18px 0}
+.sc-card{border:1px solid #ddd;border-radius:8px;padding:14px 16px;background:var(--background-color-high,#fff)}
+.sc-kicker{color:#777;font-size:.9em}.sc-value{font-size:1.7em;font-weight:600;margin-top:3px}
+.sc-table{width:100%;border-collapse:collapse}.sc-table th,.sc-table td{padding:10px 12px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}
+.sc-table th{background:rgba(127,127,127,.08)}.sc-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.88em;font-weight:600}
+.sc-ok{color:#16733c;background:#dff5e7}.sc-fail{color:#a12626;background:#fde4e4}.sc-editor{width:100%;min-height:160px;font-family:monospace}
+#sc-message{min-height:1.5em}
+</style>
+<div class="cbi-map">
+<h2 name="content"><%:Доступность сайтов%></h2>
+<div class="sc-wrap">
+<p><%:Проверка выполняется непосредственно на роутере OpenWrt, с учётом его DNS, маршрутизации и сетевых правил.%></p>
+<div class="sc-summary">
+ <div class="sc-card"><div class="sc-kicker"><%:Всего сайтов%></div><div class="sc-value" id="sc-total">—</div></div>
+ <div class="sc-card"><div class="sc-kicker"><%:Доступно%></div><div class="sc-value" id="sc-up">—</div></div>
+ <div class="sc-card"><div class="sc-kicker"><%:Недоступно%></div><div class="sc-value" id="sc-down">—</div></div>
+ <div class="sc-card"><div class="sc-kicker"><%:Последняя проверка%></div><div class="sc-value" style="font-size:1.05em" id="sc-time">—</div></div>
+</div>
+<div class="sc-toolbar">
+ <button class="cbi-button cbi-button-action" id="sc-run"><%:Проверить сейчас%></button>
+ <button class="cbi-button" id="sc-toggle"><%:Настроить сайты%></button>
+ <label><input type="checkbox" id="sc-auto" checked> <%:Автообновление каждые 60 секунд%></label>
+ <span id="sc-message"></span>
+</div>
+<div class="cbi-section"><table class="sc-table">
+<thead><tr><th><%:Сайт%></th><th>URL</th><th><%:Статус%></th><th><%:Задержка%></th><th>HTTP</th></tr></thead>
+<tbody id="sc-rows"><tr><td colspan="5"><%:Загрузка…%></td></tr></tbody>
+</table></div>
+<div class="cbi-section" id="sc-editor-box" style="display:none">
+<h3><%:Список сайтов%></h3>
+<p><%:JSON-массив объектов name и domain. Разрешены http:// и https://, максимум 30 сайтов.%></p>
+<textarea class="cbi-input-textarea sc-editor" id="sc-editor" spellcheck="false"></textarea>
+<div class="sc-toolbar"><button class="cbi-button cbi-button-positive" id="sc-save"><%:Сохранить список%></button><button class="cbi-button" id="sc-reset"><%:Сбросить список%></button></div>
+</div>
+</div></div>
+<script>
+(function(){
+"use strict";
+var base="<%=url('admin/services/sitecheck')%>",domains=[],busy=false,timer=null;
+var defaults=[
+ {name:"YouTube",domain:"https://www.youtube.com/"},
+ {name:"WhatsApp",domain:"https://web.whatsapp.com/"},
+ {name:"Telegram",domain:"https://web.telegram.org/"},
+ {name:"Instagram",domain:"https://www.instagram.com/"},
+ {name:"TikTok",domain:"https://www.tiktok.com/"},
+ {name:"Discord",domain:"https://discord.com/"}
+];
+function $(id){return document.getElementById(id)}
+function msg(s){$("sc-message").textContent=s||""}
+function req(path,data){
+ var body=new URLSearchParams();Object.keys(data||{}).forEach(function(k){body.set(k,data[k])});
+ return fetch(base+"/"+path,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString(),credentials:"same-origin"})
+ .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j})});
+}
+function render(results,at){
+ var up=results.filter(function(x){return x.ok}).length;
+ $("sc-total").textContent=results.length;$("sc-up").textContent=up;$("sc-down").textContent=results.length-up;$("sc-time").textContent=at||new Date().toLocaleTimeString();
+ var body=$("sc-rows");while(body.firstChild)body.removeChild(body.firstChild);
+ results.forEach(function(x){
+  var tr=document.createElement("tr");
+  function cell(v){var td=document.createElement("td");td.textContent=v==null?"—":String(v);tr.appendChild(td);return td}
+  cell(x.name);cell(x.domain);var st=cell("");var badge=document.createElement("span");
+  badge.className="sc-pill "+(x.ok?"sc-ok":"sc-fail");badge.textContent=x.ok?"Доступен":"Нет ответа";st.appendChild(badge);
+  cell(x.latency_ms==null?"—":x.latency_ms+" мс");cell(!x.http_code?"—":x.http_code);body.appendChild(tr);
+ });
+}
+function check(){
+ if(busy||!domains.length)return;busy=true;$("sc-run").disabled=true;msg("Проверка…");
+ req("check",{domains:JSON.stringify(domains)}).then(function(d){render(d.results||[],d.checked_at);msg("Готово")})
+ .catch(function(e){msg("Ошибка: "+e.message)})
+ .finally(function(){busy=false;$("sc-run").disabled=false});
+}
+function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2)})}
+$("sc-run").addEventListener("click",check);
+$("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
+$("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.parse($("sc-editor").value)}catch(e){msg("Ошибка JSON: "+e.message);return}
+ if(!Array.isArray(parsed)||parsed.length<1||parsed.length>30){msg("Нужно от 1 до 30 сайтов");return}
+ req("save_config",{domains:JSON.stringify(parsed)}).then(function(){domains=parsed;msg("Сохранено");check()}).catch(function(e){msg("Ошибка сохранения: "+e.message)});
+});
+$("sc-reset").addEventListener("click",function(){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Нажмите «Сохранить список» для применения")});
+$("sc-auto").addEventListener("change",function(){if(timer)clearInterval(timer);timer=this.checked?setInterval(check,60000):null});
+load().then(check).catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message);check()});
+timer=setInterval(check,60000);
+})();
+</script>
+<%+footer%>
