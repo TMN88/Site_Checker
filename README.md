@@ -27,7 +27,7 @@ LuCI-панель для проверки доступности сайтов н
 Выполни по SSH от `root`:
 
 ```sh
-wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@a1101c8e6e69eeab1a045ae4a2f5df0fe6a18a0e/install.sh' && sh /tmp/site-checker-install.sh
+wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@e1b0425f16170b47efa1716f83deab5f58f71eba/install.sh' && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой **LuCI → Services → Site_Checker**.
