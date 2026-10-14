@@ -109,14 +109,15 @@ if [ -z "$PM" ]; then
   else die "Не найден менеджер пакетов apk или opkg."; fi
 fi
 
-# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.
+# Site_Checker uses a legacy LuCI Lua controller. Modern OpenWrt builds
+# may run LuCI on ucode only, so install the official Lua compatibility runtime.
+# Let the branch-native package manager resolve the correct dependencies.
 step "Проверка и установка зависимостей"
-# Install dependencies with the package manager native to this OpenWrt branch
-# (apk for OpenWrt 25.12+, opkg for OpenWrt 24.10).
 if [ "$PM" = apk ]; then
+  pkg_installed() { apk info -e "$1" >/dev/null 2>&1; }
   MISSING=""
-  for pkg in luci-base curl; do
-    if ! apk info 2>/dev/null | grep -Fxq "$pkg"; then MISSING="$MISSING $pkg"; fi
+  for pkg in luci-base luci-lua-runtime curl; do
+    if ! pkg_installed "$pkg"; then MISSING="$MISSING $pkg"; fi
   done
   if [ -n "$MISSING" ]; then
     log "Обновление списка пакетов apk."
@@ -127,7 +128,7 @@ if [ "$PM" = apk ]; then
 else
   pkg_installed() { opkg status "$1" 2>/dev/null | grep -q '^Status:.* installed'; }
   MISSING=""
-  for pkg in luci-base curl; do
+  for pkg in luci-base luci-lua-runtime curl; do
     if ! pkg_installed "$pkg"; then MISSING="$MISSING $pkg"; fi
   done
   if [ -n "$MISSING" ]; then
@@ -136,6 +137,14 @@ else
     # Intentional word splitting: MISSING is a space-separated package list.
     opkg install $MISSING || die "Не удалось установить зависимости:$MISSING"
   fi
+fi
+
+# Fail early with a clear explanation if the feed for this device does not
+# provide the legacy runtime required by the Lua controller.
+if [ "$PM" = apk ]; then
+  pkg_installed luci-lua-runtime || die "Не установлен luci-lua-runtime. Проверьте, что подключены официальные feeds для вашей версии OpenWrt и архитектуры."
+else
+  pkg_installed luci-lua-runtime || die "Не установлен luci-lua-runtime. Проверьте, что подключены официальные feeds для вашей версии OpenWrt и архитектуры."
 fi
 
 step "Загрузка и проверка файлов Site Checker"
