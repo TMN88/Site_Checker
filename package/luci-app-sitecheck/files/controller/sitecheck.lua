@@ -4,6 +4,7 @@ function index()
     if not nixio.fs.access("/usr/libexec/sitecheck-check") then return end
     entry({"admin", "services", "sitecheck"}, template("sitecheck/index"), _("Site_Checker"), 85).dependent = true
     entry({"admin", "services", "sitecheck", "check"}, call("action_check")).leaf = true
+    entry({"admin", "services", "sitecheck", "check_zapret"}, call("action_check_zapret")).leaf = true
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_config"}, call("action_save_config")).leaf = true
     entry({"admin", "services", "sitecheck", "save_settings"}, call("action_save_settings")).leaf = true
@@ -58,35 +59,55 @@ local function valid_url(url)
          url:match("^http://[%w%.%-]+[%w%-%._~:/?#%[%]@!$&'()*+,;=%%]*$"))
 end
 
-function action_check()
-    local http = require("luci.http")
-    local json = require("luci.jsonc")
+local function decode_domains(http, json, max_count)
     local domains = json.parse(http.formvalue("domains") or "[]")
     if type(domains) ~= "table" then
         http.status(400, "Bad Request")
         http.prepare_content("application/json")
         http.write_json({ error = "Некорректный список доменов" })
-        return
+        return nil
     end
-
     local safe = {}
     for _, item in ipairs(domains) do
-        if #safe >= 30 then break end
+        if #safe >= max_count then break end
         if type(item) == "table" and valid_url(item.domain) then
             safe[#safe + 1] = { name = tostring(item.name or item.domain):sub(1, 80), domain = item.domain }
         end
     end
+    return safe
+end
 
+local function run_check_script(script_path, url)
+    local pipe = io.popen(script_path .. " " .. string.format("%q", url) .. " 2>/dev/null")
+    local output = pipe and pipe:read("*a") or ""
+    if pipe then pipe:close() end
+    local ok, ms, code = output:match("^(%d+)|(%d+)|(%d+)")
+    return ok == "1", tonumber(ms), tonumber(code)
+end
+
+function action_check()
+    local http = require("luci.http")
+    local json = require("luci.jsonc")
+    local safe = decode_domains(http, json, 30)
+    if not safe then return end
     local results = {}
     for _, item in ipairs(safe) do
-        local pipe = io.popen("/usr/libexec/sitecheck-check " .. string.format("%q", item.domain) .. " 2>/dev/null")
-        local output = pipe and pipe:read("*a") or ""
-        if pipe then pipe:close() end
-        local ok, ms, code = output:match("^(%d+)|(%d+)|(%d+)")
-        results[#results + 1] = {
-            name = item.name, domain = item.domain, ok = ok == "1",
-            latency_ms = tonumber(ms), http_code = tonumber(code)
-        }
+        local ok, ms, code = run_check_script("/usr/libexec/sitecheck-check", item.domain)
+        results[#results + 1] = { name = item.name, domain = item.domain, ok = ok, latency_ms = ms, http_code = code }
+    end
+    http.prepare_content("application/json")
+    http.write_json({ results = results, checked_at = os.date("%Y-%m-%d %H:%M:%S") })
+end
+
+function action_check_zapret()
+    local http = require("luci.http")
+    local json = require("luci.jsonc")
+    local safe = decode_domains(http, json, 30)
+    if not safe then return end
+    local results = {}
+    for _, item in ipairs(safe) do
+        local ok, ms, code = run_check_script("/usr/libexec/sitecheck-check-zapret", item.domain)
+        results[#results + 1] = { name = item.name, domain = item.domain, ok = ok, latency_ms = ms, http_code = code }
     end
     http.prepare_content("application/json")
     http.write_json({ results = results, checked_at = os.date("%Y-%m-%d %H:%M:%S") })
@@ -128,4 +149,3 @@ function action_save_config()
     http.prepare_content("application/json")
     http.write_json({ ok = true, count = #cleaned })
 end
-

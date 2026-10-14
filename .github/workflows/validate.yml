@@ -13,7 +13,7 @@ jobs:
       - name: Check shell syntax
         run: |
           set -eu
-          for file in install.sh files/sitecheck-check; do
+          for file in install.sh files/sitecheck-check files/sitecheck-check-zapret; do
             sh -n "$file"
           done
       - name: Check LuCI JavaScript syntax
@@ -30,7 +30,7 @@ jobs:
       - name: Verify package source mirrors
         run: |
           set -eu
-          for file in controller/sitecheck.lua view/index.htm sitecheck-check sitecheck.conf; do
+          for file in controller/sitecheck.lua view/index.htm sitecheck-check sitecheck-check-zapret sitecheck.conf; do
             cmp "files/$file" "package/luci-app-sitecheck/files/$file"
           done
       - name: Verify installer safeguards and UI actions
@@ -46,3 +46,5 @@ jobs:
           ! grep -q 'AWG / Podkop VPN Failover' install.sh
           grep -q 'id="sc-save-auto"' files/view/index.htm
           grep -q 'save_settings' files/controller/sitecheck.lua
+          grep -q 'id="sc-zm-run"' files/view/index.htm
+          grep -q 'check_zapret' files/controller/sitecheck.lua
