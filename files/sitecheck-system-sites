@@ -4,6 +4,9 @@
 # Output fields: index|site_name|url|reachable|elapsed_ms|http_code
 set -u
 
+ENABLED="${1-}"
+case "$ENABLED" in *[!0-9,]* ) echo "invalid enabled list" >&2; exit 2 ;; esac
+
 TMP="/tmp/site-checker-zm.$$"
 LIST="$TMP/list"
 RESULTS="$TMP/results"
@@ -50,11 +53,13 @@ active=0
 while IFS='|' read -r name url; do
     [ -n "$name" ] && [ -n "$url" ] || continue
     total=$((total + 1))
+    if [ "$#" -eq 0 ] || printf ',%s,' "$ENABLED" | grep -q ",$total,"; then
     run_one "$total" "$name" "$url" &
     active=$((active + 1))
     if [ "$active" -ge 10 ]; then
         wait
         active=0
+    fi
     fi
 done < "$LIST"
 wait

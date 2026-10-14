@@ -4,7 +4,7 @@
 .sc-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:18px 0}
 .sc-card{border:1px solid #ddd;border-radius:8px;padding:14px 16px;background:var(--background-color-high,#fff)}
 .sc-kicker{color:#777;font-size:.9em}.sc-value{font-size:1.7em;font-weight:600;margin-top:3px}
-.sc-table{width:100%;border-collapse:collapse}.sc-table th,.sc-table td{padding:10px 12px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}
+.sc-checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 18px;margin:12px 0}.sc-checkitem{display:flex;gap:9px;align-items:flex-start;padding:7px 0}.sc-checkitem input{margin-top:4px}.sc-table{width:100%;border-collapse:collapse}.sc-table th,.sc-table td{padding:10px 12px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}
 .sc-table th{background:rgba(127,127,127,.08)}.sc-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.88em;font-weight:600}
 .sc-ok{color:#16733c;background:#dff5e7}.sc-fail{color:#a12626;background:#fde4e4}.sc-editor{width:100%;min-height:160px;font-family:monospace}
 #sc-message{min-height:1.5em}
@@ -29,10 +29,9 @@
 <tbody id="sc-rows"><tr><td colspan="5"><%:Загрузка…%></td></tr></tbody>
 </table></div>
 <div class="cbi-section" id="sc-editor-box" style="display:none">
-<h3><%:Список сайтов%></h3>
-<p><%:JSON-массив объектов name и domain. Разрешены http:// и https://, максимум 30 сайтов.%></p>
-<textarea class="cbi-input-textarea sc-editor" id="sc-editor" spellcheck="false"></textarea>
-<div class="sc-toolbar"><button class="cbi-button cbi-button-positive" id="sc-save"><%:Сохранить список%></button><button class="cbi-button" id="sc-reset"><%:Сбросить список%></button></div>
+<h3>Первая таблица — выбор сайтов</h3><p>Можно отключать сайты из текущего списка. Добавлять новые сайты здесь нельзя.</p>
+<div id="sc-editor" class="sc-checklist"></div><div class="sc-toolbar"><button class="cbi-button cbi-button-positive" id="sc-save">Сохранить выбор</button></div>
+<hr><h3>Вторая таблица — выбор сайтов</h3><div id="sc-zm-editor" class="sc-checklist"></div><div class="sc-toolbar"><button class="cbi-button cbi-button-positive" id="sc-save-zm">Сохранить выбор второй таблицы</button></div>
 </div>
 
 <hr>
@@ -52,6 +51,8 @@
 (function(){
 "use strict";
 var base="<%=url('admin/services/sitecheck')%>",authToken="<%=token%>",domains=[],busy=false;
+var zmSites=[{name:"YouTube",domain:"https://www.youtube.com/"},{name:"WhatsApp",domain:"https://web.whatsapp.com/"},{name:"Telegram",domain:"https://web.telegram.org/"},{name:"Instagram",domain:"https://www.instagram.com/"},{name:"TikTok",domain:"https://www.tiktok.com/"},{name:"Discord",domain:"https://discord.com/"},{name:"ChatGPT",domain:"https://chatgpt.com/"},{name:"Facebook",domain:"https://facebook.com/"},{name:"ntc.party",domain:"https://ntc.party/"},{name:"OpenWrt",domain:"https://openwrt.org/"},{name:"OpenWrt downloads",domain:"https://downloads.openwrt.org/"},{name:"Google Play",domain:"https://play.google.com/"},{name:"GitHubusercontent",domain:"https://raw.githubusercontent.com/StressOzz/Zapret-Manager/refs/heads/main/Zapret-Manager.sh"},{name:"Rutracker",domain:"https://rutracker.org/"},{name:"Gosuslugi",domain:"https://www.gosuslugi.ru/"},{name:"Nalog",domain:"https://nalog.ru/"}];
+var zmEnabled=zmSites.map(function(_,i){return i+1});
 var defaults=[
  {name:"YouTube",domain:"https://www.youtube.com/"},
  {name:"WhatsApp",domain:"https://web.whatsapp.com/"},
@@ -90,11 +91,13 @@ function renderZapret(results){
  });
 }
 function check(){
- if(busy||!domains.length)return;
+ if(busy)return;
  busy=true;$("sc-run").disabled=true;msg("Проверка обеих таблиц…");$("sc-zm-message").textContent="Проверка…";
+ var selected=domains.filter(function(d){return d.enabled!==false});
+ var enabled=zmEnabled.join(",");
  Promise.all([
-  req("check",{domains:JSON.stringify(domains)}),
-  req("check_zapret",{})
+  selected.length?req("check",{domains:JSON.stringify(selected)}):Promise.resolve({results:[],checked_at:new Date().toLocaleTimeString()}),
+  req("check_zapret",{enabled:enabled})
  ]).then(function(all){
   var d=all[0],z=all[1];
   render(d.results||[],d.checked_at);
@@ -104,15 +107,24 @@ function check(){
  }).catch(function(e){msg("Ошибка: "+e.message);$("sc-zm-message").textContent="Проверка завершилась с ошибкой: "+e.message})
  .finally(function(){busy=false;$("sc-run").disabled=false});
 }
-function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2)})}
+function drawChecks(container,items,checked,kind){
+ var box=$(container);while(box.firstChild)box.removeChild(box.firstChild);
+ items.forEach(function(item,i){var label=document.createElement("label");label.className="sc-checkitem";
+ var cb=document.createElement("input");cb.type="checkbox";cb.checked=checked.indexOf(kind==="first"?item.domain:i+1)!==-1;
+ cb.setAttribute("data-kind",kind);cb.setAttribute("data-key",kind==="first"?item.domain:String(i+1));
+ var text=document.createElement("span");text.textContent=item.name+" — "+item.domain;label.appendChild(cb);label.appendChild(text);box.appendChild(label);});
+}
+function readChecks(kind){var keys=[];document.querySelectorAll('input[data-kind="'+kind+'"]').forEach(function(cb){if(cb.checked)keys.push(cb.getAttribute("data-key"))});return keys}
+function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){
+ domains=d.domains||defaults.slice();drawChecks("sc-editor",domains,domains.filter(function(x){return x.enabled!==false}).map(function(x){return x.domain}),"first");
+ try{var saved=localStorage.getItem("sitecheck-zm-enabled");if(saved!==null)zmEnabled=JSON.parse(saved)}catch(e){}
+ drawChecks("sc-zm-editor",zmSites,zmEnabled,"second");
+})}
 $("sc-run").addEventListener("click",check);
 $("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
-$("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.parse($("sc-editor").value)}catch(e){msg("Ошибка JSON: "+e.message);return}
- if(!Array.isArray(parsed)||parsed.length<1||parsed.length>30){msg("Нужно от 1 до 30 сайтов");return}
- req("save_config",{domains:JSON.stringify(parsed)}).then(function(){domains=parsed;msg("Сохранено")}).catch(function(e){msg("Ошибка сохранения: "+e.message)});
-});
-$("sc-reset").addEventListener("click",function(){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Нажмите «Сохранить список» для применения")});
-load().catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message)});
+$("sc-save").addEventListener("click",function(){var enabled=readChecks("first");var next=domains.map(function(d){return {name:d.name,domain:d.domain,enabled:enabled.indexOf(d.domain)!==-1}});req("save_config",{domains:JSON.stringify(next)}).then(function(){domains=next;msg("Выбор первой таблицы сохранён")}).catch(function(e){msg("Ошибка сохранения: "+e.message)});});
+$("sc-save-zm").addEventListener("click",function(){zmEnabled=readChecks("second").map(Number);try{localStorage.setItem("sitecheck-zm-enabled",JSON.stringify(zmEnabled));$("sc-zm-message").textContent="Выбор второй таблицы сохранён"}catch(e){$("sc-zm-message").textContent="Не удалось сохранить выбор в браузере"}});
+load().catch(function(e){domains=defaults.slice();drawChecks("sc-editor",domains,domains.map(function(x){return x.domain}),"first");drawChecks("sc-zm-editor",zmSites,zmSites.map(function(_,i){return i+1}),"second");msg("Не удалось загрузить настройки: "+e.message)});
 })();
 </script>
 <%+footer%>
