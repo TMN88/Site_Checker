@@ -109,7 +109,8 @@ if [ -z "$PM" ]; then
   else die "Не найден менеджер пакетов apk или opkg."; fi
 fi
 
-# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.\nstep "Проверка и установка зависимостей"
+# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.
+step "Проверка и установка зависимостей"
 # Install dependencies with the package manager native to this OpenWrt branch
 # (apk for OpenWrt 25.12+, opkg for OpenWrt 24.10).
 if [ "$PM" = apk ]; then
