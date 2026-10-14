@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 LUCI_TITLE:=LuCI Site_Checker
 LUCI_DEPENDS:=+luci-base +curl
 PKG_NAME:=luci-app-sitecheck
-PKG_VERSION:=1.2.0
+PKG_VERSION:=1.3.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
@@ -31,6 +31,8 @@ define Package/luci-app-sitecheck/install
 	$(INSTALL_DATA) ./files/view/index.htm $(1)/usr/lib/lua/luci/view/sitecheck/index.htm
 	$(INSTALL_DIR) $(1)/usr/libexec
 	$(INSTALL_BIN) ./files/sitecheck-check $(1)/usr/libexec/sitecheck-check
+	$(INSTALL_BIN) ./files/sitecheck-check-zapret $(1)/usr/libexec/sitecheck-check-zapret
+	$(INSTALL_BIN) ./files/sitecheck-system-sites $(1)/usr/libexec/sitecheck-system-sites
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/sitecheck.conf $(1)/etc/config/sitecheck
 endef

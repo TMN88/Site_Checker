@@ -1,0 +1,19 @@
+#!/bin/sh
+# Adaptation of Zapret Manager System-tab _si_sites() HTTP check.
+# Upstream: https://github.com/StressOzz/Zapret-Manager/blob/721c5c5367cc277007e7f60bb2f13b475e68d295/ZapretManager_LuCI.sh
+# Output fields: reachable|elapsed_ms|http_code
+URL="$1"
+case "$URL" in http://*|https://*) ;; *) echo "0|0|0"; exit 0 ;; esac
+command -v curl >/dev/null 2>&1 || { echo "0|0|0"; exit 0; }
+
+START="$(date +%s)"
+RESULT="$(curl -sL --connect-timeout 3 --max-time 5 --speed-time 3 --speed-limit 1 --range 0-65535 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) curl/8.0" -o /dev/null -w '%{http_code}|%{time_total}' "$URL" 2>/dev/null)"
+RC=$?
+END="$(date +%s)"
+CODE="${RESULT%%|*}"
+SEC="${RESULT#*|}"
+case "$SEC" in *'|'*|'') SEC=0 ;; esac
+MS="$(awk -v s="$SEC" 'BEGIN { printf "%d", s * 1000 }' 2>/dev/null)"
+[ -n "$MS" ] || MS=$(( (END - START) * 1000 ))
+case "$CODE" in ''|*[!0-9]*) CODE=0 ;; esac
+if [ "$RC" -eq 0 ]; then echo "1|$MS|$CODE"; else echo "0|$MS|$CODE"; fi
