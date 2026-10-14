@@ -12,12 +12,38 @@ HELPER="/usr/libexec/sitecheck-check"
 ZAPRET_HELPER="/usr/libexec/sitecheck-check-zapret"
 ZAPRET_SITES="/usr/libexec/sitecheck-system-sites"
 CONF="/etc/config/sitecheck"
-TMP="/tmp/site-checker.$$"
+TMP="/tmp/site-checker.$"
 
-log() { printf '[Site_Checker] %s\n' "$*"; }
-die() { log "ОШИБКА: $*" >&2; exit 1; }
+# Цветной вывод включается только в интерактивном терминале.
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  C_RESET="$(printf '\\033[0m')"
+  C_CYAN="$(printf '\\033[36m')"
+  C_GREEN="$(printf '\\033[32m')"
+  C_YELLOW="$(printf '\\033[33m')"
+  C_RED="$(printf '\\033[31m')"
+  C_BOLD="$(printf '\\033[1m')"
+else
+  C_RESET=""; C_CYAN=""; C_GREEN=""; C_YELLOW=""; C_RED=""; C_BOLD=""
+fi
 
-[ "$(id -u)" = "0" ] || die "Запусти этот скрипт от root."
+log()  { printf '%s[Site Checker]%s %s\\n' "$C_CYAN" "$C_RESET" "$*"; }
+ok()   { printf '%s[  OK  ]%s %s\\n' "$C_GREEN" "$C_RESET" "$*"; }
+warn() { printf '%s[ ВНИМАНИЕ ]%s %s\\n' "$C_YELLOW" "$C_RESET" "$*"; }
+die()  { printf '%s[ ОШИБКА ]%s %s\\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
+step() { printf '\\n%s==>%s %s\\n' "$C_BOLD" "$C_RESET" "$*"; }
+
+banner() {
+  printf '\\n%s' "$C_CYAN"
+  cat <<'BANNER'
+  ┌────────────────────────────────────────┐
+  │           SITE CHECKER                  │
+  │      Установка для OpenWrt / LuCI       │
+  └────────────────────────────────────────┘
+BANNER
+  printf '%s\\n' "$C_RESET"
+}
+
+banner\n[ "$(id -u)" = "0" ] || die "Запусти этот скрипт от root."
 [ -r /etc/openwrt_release ] || die "Этот скрипт предназначен для OpenWrt."
 . /etc/openwrt_release
 REL="${DISTRIB_RELEASE:-unknown}"
@@ -25,7 +51,7 @@ log "OpenWrt $REL; target: ${DISTRIB_TARGET:-unknown}; arch: ${DISTRIB_ARCH:-unk
 case "$REL" in
   24|24.*) PM="opkg" ;;
   25|25.*) PM="apk" ;;
-  *) PM="" ; log "Предупреждение: скрипт предназначен для OpenWrt 24.10.x (opkg) и 25.12.x (apk); совместимость с $REL не подтверждена." ;;
+  *) PM="" ; warn "Скрипт рассчитан на OpenWrt 24.10.x (opkg) и 25.12.x (apk); совместимость с $REL не подтверждена." ;;
 esac
 
 fetch() {
@@ -82,7 +108,7 @@ if [ -z "$PM" ]; then
   else die "Не найден менеджер пакетов apk или opkg."; fi
 fi
 
-# Install dependencies with the package manager native to this OpenWrt branch
+# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.\nstep "Проверка и установка зависимостей"\n# Install dependencies with the package manager native to this OpenWrt branch
 # (apk for OpenWrt 25.12+, opkg for OpenWrt 24.10).
 if [ "$PM" = apk ]; then
   MISSING=""
@@ -109,7 +135,7 @@ else
   fi
 fi
 
-mkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck \
+step "Загрузка и проверка файлов Site Checker"\nmkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck \
   /usr/libexec /etc/config
 trap 'rm -rf "$TMP"' EXIT
 trap 'exit 1' HUP INT TERM
@@ -130,7 +156,7 @@ done
 grep -q '^module("luci.controller.sitecheck"' "$TMP/sitecheck.lua" || die "Загруженный контроллер не распознан."
 grep -q '^config sitecheck' "$TMP/sitecheck.conf" || die "Конфигурация сайта не прошла проверку содержимого."
 
-cp "$TMP/sitecheck.lua" "$CTRL"; chmod 0644 "$CTRL"
+step "Установка файлов LuCI и проверяющих модулей"\ncp "$TMP/sitecheck.lua" "$CTRL"; chmod 0644 "$CTRL"
 cp "$TMP/index.htm" "$VIEW"; chmod 0644 "$VIEW"
 cp "$TMP/sitecheck-check" "$HELPER"; chmod 0755 "$HELPER"
 cp "$TMP/sitecheck-check-zapret" "$ZAPRET_HELPER"; chmod 0755 "$ZAPRET_HELPER"
