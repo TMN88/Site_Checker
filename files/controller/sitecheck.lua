@@ -71,7 +71,7 @@ local function decode_domains(http, json, max_count)
     for _, item in ipairs(domains) do
         if #safe >= max_count then break end
         if type(item) == "table" and valid_url(item.domain) then
-            safe[#safe + 1] = { name = tostring(item.name or item.domain):sub(1, 80), domain = item.domain }
+            safe[#safe + 1] = { name = tostring(item.name or item.domain):sub(1, 80), domain = item.domain, enabled = item.enabled ~= false }
         end
     end
     return safe
