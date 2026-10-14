@@ -4,7 +4,7 @@ set -eu
 
 # Pinned source revision, deliberately using jsDelivr rather than raw.githubusercontent.com
 # because some routers/networks have returned stale cached raw files.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@65e2baadff627ee0a75f95d8e57b7797091508e4"
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@4d32d4182e9dc8901f799d4fa826bee796e03693"
 
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
