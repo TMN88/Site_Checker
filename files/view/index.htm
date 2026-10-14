@@ -21,6 +21,8 @@
 </div>
 <div class="sc-toolbar">
  <button class="cbi-button cbi-button-action" id="sc-run"><%:Проверить сейчас%></button>
+ <label class="sc-checkitem"><input type="checkbox" id="sc-first-enabled" checked> <span>Включить первую проверку</span></label>
+ <label class="sc-checkitem"><input type="checkbox" id="sc-second-enabled" checked> <span>Включить вторую проверку</span></label>
  <button class="cbi-button" id="sc-toggle"><%:Настроить сайты%></button>
  <span id="sc-message"></span>
 </div>
@@ -53,6 +55,7 @@
 var base="<%=url('admin/services/sitecheck')%>",authToken="<%=token%>",domains=[],busy=false;
 var zmSites=[{name:"YouTube",domain:"https://www.youtube.com/"},{name:"WhatsApp",domain:"https://web.whatsapp.com/"},{name:"Telegram",domain:"https://web.telegram.org/"},{name:"Instagram",domain:"https://www.instagram.com/"},{name:"TikTok",domain:"https://www.tiktok.com/"},{name:"Discord",domain:"https://discord.com/"},{name:"ChatGPT",domain:"https://chatgpt.com/"},{name:"Facebook",domain:"https://facebook.com/"},{name:"ntc.party",domain:"https://ntc.party/"},{name:"OpenWrt",domain:"https://openwrt.org/"},{name:"OpenWrt downloads",domain:"https://downloads.openwrt.org/"},{name:"Google Play",domain:"https://play.google.com/"},{name:"GitHubusercontent",domain:"https://raw.githubusercontent.com/StressOzz/Zapret-Manager/refs/heads/main/Zapret-Manager.sh"},{name:"Rutracker",domain:"https://rutracker.org/"},{name:"Gosuslugi",domain:"https://www.gosuslugi.ru/"},{name:"Nalog",domain:"https://nalog.ru/"}];
 var zmEnabled=zmSites.map(function(_,i){return i+1});
+var firstCheckEnabled=true,secondCheckEnabled=true;
 var defaults=[
  {name:"YouTube",domain:"https://www.youtube.com/"},
  {name:"WhatsApp",domain:"https://web.whatsapp.com/"},
@@ -92,20 +95,22 @@ function renderZapret(results){
 }
 function check(){
  if(busy)return;
- busy=true;$("sc-run").disabled=true;msg("Проверка обеих таблиц…");$("sc-zm-message").textContent="Проверка…";
+ if(!firstCheckEnabled&&!secondCheckEnabled){msg("Обе проверки отключены");$("sc-editor-box").style.display="none";return;}
+ busy=true;$("sc-run").disabled=true;msg("Выполняется проверка…");$("sc-zm-message").textContent="";
  var selected=domains.filter(function(d){return d.enabled!==false});
  var enabled=zmEnabled.join(",");
  Promise.all([
-  selected.length?req("check",{domains:JSON.stringify(selected)}):Promise.resolve({results:[],checked_at:new Date().toLocaleTimeString()}),
-  req("check_zapret",{enabled:enabled})
+  firstCheckEnabled?(selected.length?req("check",{domains:JSON.stringify(selected)}):Promise.resolve({results:[],checked_at:new Date().toLocaleTimeString()})):Promise.resolve({skipped:true}),
+  secondCheckEnabled?req("check_zapret",{enabled:enabled}):Promise.resolve({skipped:true})
  ]).then(function(all){
   var d=all[0],z=all[1];
-  render(d.results||[],d.checked_at);
-  renderZapret(z.results||[]);
-  msg("Первая таблица: "+(d.results||[]).filter(function(x){return x.ok}).length+"/"+(d.results||[]).length+" доступно");
-  $("sc-zm-message").textContent="Вторая таблица: "+(z.results||[]).filter(function(x){return x.ok}).length+"/"+(z.results||[]).length+" доступно • "+(z.checked_at||new Date().toLocaleTimeString());
+  if(d.skipped){$("sc-total").textContent="—";$("sc-up").textContent="—";$("sc-down").textContent="—";$("sc-time").textContent="—";$("sc-rows").innerHTML="<tr><td colspan='5'>Первая проверка отключена</td></tr>";}
+  else{render(d.results||[],d.checked_at);}
+  if(z.skipped){$("sc-zm-rows").innerHTML="<tr><td colspan='5'>Вторая проверка отключена</td></tr>";$("sc-zm-message").textContent="Вторая проверка отключена";}
+  else{renderZapret(z.results||[]);$("sc-zm-message").textContent="Вторая таблица: "+(z.results||[]).filter(function(x){return x.ok}).length+"/"+(z.results||[]).length+" доступно • "+(z.checked_at||new Date().toLocaleTimeString());}
+  msg(d.skipped?"Первая проверка отключена":("Первая таблица: "+(d.results||[]).filter(function(x){return x.ok}).length+"/"+(d.results||[]).length+" доступно"));
  }).catch(function(e){msg("Ошибка: "+e.message);$("sc-zm-message").textContent="Проверка завершилась с ошибкой: "+e.message})
- .finally(function(){busy=false;$("sc-run").disabled=false});
+ .finally(function(){busy=false;$("sc-run").disabled=false;$("sc-editor-box").style.display="none";});
 }
 function drawChecks(container,items,checked,kind){
  var box=$(container);while(box.firstChild)box.removeChild(box.firstChild);
@@ -117,10 +122,13 @@ function drawChecks(container,items,checked,kind){
 function readChecks(kind){var keys=[];document.querySelectorAll('input[data-kind="'+kind+'"]').forEach(function(cb){if(cb.checked)keys.push(cb.getAttribute("data-key"))});return keys}
 function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){
  domains=d.domains||defaults.slice();drawChecks("sc-editor",domains,domains.filter(function(x){return x.enabled!==false}).map(function(x){return x.domain}),"first");
- try{var saved=localStorage.getItem("sitecheck-zm-enabled");if(saved!==null)zmEnabled=JSON.parse(saved)}catch(e){}
+ try{var saved=localStorage.getItem("sitecheck-zm-enabled");if(saved!==null)zmEnabled=JSON.parse(saved);firstCheckEnabled=localStorage.getItem("sitecheck-first-enabled")!=="false";secondCheckEnabled=localStorage.getItem("sitecheck-second-enabled")!=="false"}catch(e){}
+ $("sc-first-enabled").checked=firstCheckEnabled;$("sc-second-enabled").checked=secondCheckEnabled;
  drawChecks("sc-zm-editor",zmSites,zmEnabled,"second");
 })}
 $("sc-run").addEventListener("click",check);
+$("sc-first-enabled").addEventListener("change",function(){firstCheckEnabled=this.checked;try{localStorage.setItem("sitecheck-first-enabled",String(firstCheckEnabled))}catch(e){}});
+$("sc-second-enabled").addEventListener("change",function(){secondCheckEnabled=this.checked;try{localStorage.setItem("sitecheck-second-enabled",String(secondCheckEnabled))}catch(e){}});
 $("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
 $("sc-save").addEventListener("click",function(){var enabled=readChecks("first");var next=domains.map(function(d){return {name:d.name,domain:d.domain,enabled:enabled.indexOf(d.domain)!==-1}});req("save_config",{domains:JSON.stringify(next)}).then(function(){domains=next;msg("Выбор первой таблицы сохранён")}).catch(function(e){msg("Ошибка сохранения: "+e.message)});});
 $("sc-save-zm").addEventListener("click",function(){zmEnabled=readChecks("second").map(Number);try{localStorage.setItem("sitecheck-zm-enabled",JSON.stringify(zmEnabled));$("sc-zm-message").textContent="Выбор второй таблицы сохранён"}catch(e){$("sc-zm-message").textContent="Не удалось сохранить выбор в браузере"}});
