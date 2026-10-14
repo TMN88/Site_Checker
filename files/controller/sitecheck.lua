@@ -26,7 +26,7 @@ local function read_domains()
     local domains = {}
     uci:foreach("sitecheck", "site", function(s)
         if s.domain and #s.domain > 0 then
-            domains[#domains + 1] = { name = s.name or s.domain, domain = s.domain }
+            domains[#domains + 1] = { name = s.name or s.domain, domain = s.domain, enabled = s.enabled ~= "0" }
         end
     end)
     return #domains > 0 and domains or defaults()
@@ -92,8 +92,10 @@ function action_check()
     if not safe then return end
     local results = {}
     for _, item in ipairs(safe) do
-        local ok, ms, code = run_check_script("/usr/libexec/sitecheck-check", item.domain)
-        results[#results + 1] = { name = item.name, domain = item.domain, ok = ok, latency_ms = ms, http_code = code }
+        if item.enabled ~= false then
+            local ok, ms, code = run_check_script("/usr/libexec/sitecheck-check", item.domain)
+            results[#results + 1] = { name = item.name, domain = item.domain, ok = ok, latency_ms = ms, http_code = code }
+        end
     end
     http.prepare_content("application/json")
     http.write_json({ results = results, checked_at = os.date("%Y-%m-%d %H:%M:%S") })
@@ -101,7 +103,11 @@ end
 
 function action_check_zapret()
     local http = require("luci.http")
-    local pipe = io.popen("/usr/libexec/sitecheck-system-sites 2>/dev/null")
+    local enabled = http.formvalue("enabled") or ""
+    if enabled ~= "" and not enabled:match("^[0-9,]+$") then
+        http.status(400, "Bad Request"); http.prepare_content("application/json"); http.write_json({ error = "Некорректный список выбранных сайтов" }); return
+    end
+    local pipe = io.popen("/usr/libexec/sitecheck-system-sites " .. string.format("%q", enabled) .. " 2>/dev/null")
     local output = pipe and pipe:read("*a") or ""
     local command_ok = false
     if pipe then
@@ -139,34 +145,30 @@ function action_save_config()
     local json = require("luci.jsonc")
     local domains = json.parse(http.formvalue("domains") or "[]")
     if type(domains) ~= "table" or #domains < 1 or #domains > 30 then
-        http.status(400, "Bad Request")
-        http.prepare_content("application/json")
-        http.write_json({ error = "Нужен список от 1 до 30 сайтов" })
-        return
+        http.status(400, "Bad Request"); http.prepare_content("application/json")
+        http.write_json({ error = "Некорректный список сайтов" }); return
     end
-
-    local cleaned = {}
+    local uci = require("luci.model.uci").cursor()
+    local existing = read_domains()
+    local enabled = {}
     for _, item in ipairs(domains) do
-        if type(item) == "table" and type(item.name) == "string" and valid_url(item.domain) then
-            cleaned[#cleaned + 1] = { name = item.name:sub(1, 80), domain = item.domain }
+        if type(item) == "table" and type(item.domain) == "string" then enabled[item.domain] = item.enabled ~= false end
+    end
+    local found = {}
+    uci:foreach("sitecheck", "site", function(s)
+        if s.domain then
+            found[s.domain] = true
+            uci:set("sitecheck", s[".name"], "enabled", enabled[s.domain] == false and "0" or "1")
+        end
+    end)
+    if next(found) == nil then
+        for _, item in ipairs(existing) do
+            local section = uci:add("sitecheck", "site")
+            uci:set("sitecheck", section, "name", item.name)
+            uci:set("sitecheck", section, "domain", item.domain)
+            uci:set("sitecheck", section, "enabled", enabled[item.domain] == false and "0" or "1")
         end
     end
-    if #cleaned == 0 then
-        http.status(400, "Bad Request")
-        http.prepare_content("application/json")
-        http.write_json({ error = "Не найдено корректных URL" })
-        return
-    end
-
-    local uci = require("luci.model.uci").cursor()
-    uci:delete_all("sitecheck", "site")
-    for _, item in ipairs(cleaned) do
-        local section = uci:add("sitecheck", "site")
-        uci:set("sitecheck", section, "name", item.name)
-        uci:set("sitecheck", section, "domain", item.domain)
-    end
-    uci:save("sitecheck")
-    uci:commit("sitecheck")
-    http.prepare_content("application/json")
-    http.write_json({ ok = true, count = #cleaned })
+    uci:save("sitecheck"); uci:commit("sitecheck")
+    http.prepare_content("application/json"); http.write_json({ ok = true })
 end
