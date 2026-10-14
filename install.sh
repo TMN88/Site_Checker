@@ -4,11 +4,13 @@ set -eu
 
 # Pinned source revision, deliberately using jsDelivr rather than raw.githubusercontent.com
 # because some routers/networks have returned stale cached raw files.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@442b842e360d9f948a62248dc1e45d254a3fdf12"
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@8ce7185eabc37714c764c0408f071830bda2c73d"
 
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
 HELPER="/usr/libexec/sitecheck-check"
+ZAPRET_HELPER="/usr/libexec/sitecheck-check-zapret"
+ZAPRET_SITES="/usr/libexec/sitecheck-system-sites"
 CONF="/etc/config/sitecheck"
 TMP="/tmp/site-checker.$$"
 
@@ -61,7 +63,7 @@ cleanup_managed_failover() {
 
 remove_app() {
   cleanup_managed_failover
-  rm -f "$CTRL" "$VIEW" "$HELPER"
+  rm -f "$CTRL" "$VIEW" "$HELPER" "$ZAPRET_HELPER" "$ZAPRET_SITES"
   rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
   [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
   [ ! -x /etc/init.d/uhttpd ] || /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
@@ -115,18 +117,24 @@ trap 'exit 1' HUP INT TERM
 fetch "$BASE/files/controller/sitecheck.lua" "$TMP/sitecheck.lua" || die "Не удалось загрузить контроллер."
 fetch "$BASE/files/view/index.htm" "$TMP/index.htm" || die "Не удалось загрузить интерфейс."
 fetch "$BASE/files/sitecheck-check" "$TMP/sitecheck-check" || die "Не удалось загрузить проверяющий скрипт."
+fetch "$BASE/files/sitecheck-check-zapret" "$TMP/sitecheck-check-zapret" || die "Не удалось загрузить дополнительный проверяющий скрипт."
+fetch "$BASE/files/sitecheck-system-sites" "$TMP/sitecheck-system-sites" || die "Не удалось загрузить список и запускатель проверки Zapret Manager."
 fetch "$BASE/files/sitecheck.conf" "$TMP/sitecheck.conf" || die "Не удалось загрузить конфигурацию по умолчанию."
 
-for f in sitecheck.lua index.htm sitecheck-check sitecheck.conf; do
+for f in sitecheck.lua index.htm sitecheck-check sitecheck-check-zapret sitecheck-system-sites sitecheck.conf; do
   [ -s "$TMP/$f" ] || die "Загружен пустой файл: $f"
 done
 /bin/sh -n "$TMP/sitecheck-check" || die "Синтаксическая ошибка в sitecheck-check."
+/bin/sh -n "$TMP/sitecheck-check-zapret" || die "Синтаксическая ошибка в sitecheck-check-zapret."
+/bin/sh -n "$TMP/sitecheck-system-sites" || die "Синтаксическая ошибка в sitecheck-system-sites."
 grep -q '^module("luci.controller.sitecheck"' "$TMP/sitecheck.lua" || die "Загруженный контроллер не распознан."
 grep -q '^config sitecheck' "$TMP/sitecheck.conf" || die "Конфигурация сайта не прошла проверку содержимого."
 
 cp "$TMP/sitecheck.lua" "$CTRL"; chmod 0644 "$CTRL"
 cp "$TMP/index.htm" "$VIEW"; chmod 0644 "$VIEW"
 cp "$TMP/sitecheck-check" "$HELPER"; chmod 0755 "$HELPER"
+cp "$TMP/sitecheck-check-zapret" "$ZAPRET_HELPER"; chmod 0755 "$ZAPRET_HELPER"
+cp "$TMP/sitecheck-system-sites" "$ZAPRET_SITES"; chmod 0755 "$ZAPRET_SITES"
 if [ ! -f "$CONF" ]; then
   cp "$TMP/sitecheck.conf" "$CONF"; chmod 0644 "$CONF"
 else
