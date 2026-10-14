@@ -44,9 +44,9 @@ jobs:
           ! grep -q 'fetch "$BASE/files/podkop-vpn-failover"' install.sh
           ! grep -q 'cp "$TMP/podkop-vpn-failover"' install.sh
           ! grep -q 'AWG / Podkop VPN Failover' install.sh
-          grep -q 'id="sc-save-auto"' files/view/index.htm
-          grep -q 'save_settings' files/controller/sitecheck.lua
-          grep -q 'id="sc-zm-run"' files/view/index.htm
           grep -q 'check_zapret' files/controller/sitecheck.lua
+          grep -q 'Promise.all' files/view/index.htm
+          ! grep -q 'sc-auto\|sc-save-auto\|sc-zm-run' files/view/index.htm
+          ! grep -q 'suite.v2.json' files/sitecheck-system-sites
+          grep -q 'ChatGPT|https://chatgpt.com/' files/sitecheck-system-sites
           grep -q 'curl -sL --connect-timeout 3 --max-time 5' files/sitecheck-check-zapret
-          grep -q 'suite.v2.json' files/sitecheck-system-sites

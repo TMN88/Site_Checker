@@ -7,13 +7,11 @@ set -u
 TMP="/tmp/site-checker-zm.$$"
 LIST="$TMP/list"
 RESULTS="$TMP/results"
-JSON="$TMP/suite.v2.json"
 mkdir -p "$TMP" "$RESULTS" || exit 1
 trap 'rm -rf "$TMP"' EXIT
 trap 'exit 1' HUP INT TERM
-: > "$LIST"
 
-# Static URLs used by the upstream System-tab checker.
+# Exactly the six default sites from Site_Checker's first table plus the ten requested sites.
 cat > "$LIST" <<'SITECHECK_URLS'
 YouTube|https://www.youtube.com/
 WhatsApp|https://web.whatsapp.com/
@@ -31,28 +29,7 @@ GitHubusercontent|https://raw.githubusercontent.com/StressOzz/Zapret-Manager/ref
 Rutracker|https://rutracker.org/
 Gosuslugi|https://www.gosuslugi.ru/
 Nalog|https://nalog.ru/
-esia.gosuslugi.ru|https://esia.gosuslugi.ru
-lkfl2.nalog.ru|https://lkfl2.nalog.ru
-Rutube|https://rutube.ru/
-Instagram|https://instagram.com/
-nnmclub.to|https://nnmclub.to/
-rutor.info|https://rutor.info/
-x.com|https://x.com/
-forum.ru-board.com|https://forum.ru-board.com/
 SITECHECK_URLS
-
-# The upstream System checker adds hosts from this live JSON source.
-DOMAINS_JSON="https://raw.githubusercontent.com/hyperion-cs/dpi-checkers/refs/heads/main/ru/tcp-16-20/suite.v2.json"
-if curl -fsSL --connect-timeout 8 --max-time 15 "$DOMAINS_JSON" -o "$JSON" 2>/dev/null; then
-    sed -n 's/.*"id":[[:space:]]*"\([^"]*\)".*"host":[[:space:]]*"\([^"]*\)".*/\1|\2/p' "$JSON" |
-    while IFS='|' read -r _id host; do
-        case "$host" in
-            ''|*[!A-Za-z0-9.-]*) continue ;;
-        esac
-        # Show a hostname rather than the upstream dataset's provider ID.
-        printf '%s|https://%s/\n' "$host" "$host" >> "$LIST"
-    done
-fi
 
 run_one() {
     idx="$1"

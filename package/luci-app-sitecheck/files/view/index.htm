@@ -22,8 +22,6 @@
 <div class="sc-toolbar">
  <button class="cbi-button cbi-button-action" id="sc-run"><%:Проверить сейчас%></button>
  <button class="cbi-button" id="sc-toggle"><%:Настроить сайты%></button>
- <label><input type="checkbox" id="sc-auto"> <%:Автообновление каждые 60 секунд%></label>
- <button class="cbi-button" id="sc-save-auto"><%:Сохранить параметр%></button>
  <span id="sc-message"></span>
 </div>
 <div class="cbi-section"><table class="sc-table">
@@ -41,7 +39,6 @@
 <h3>Вторая проверка — метод Zapret Manager</h3>
 <p>Источник алгоритма: <a href="https://github.com/StressOzz/Zapret-Manager/blob/721c5c5367cc277007e7f60bb2f13b475e68d295/Zapret-Manager.sh" target="_blank" rel="noreferrer">Zapret-Manager.sh</a>. Проверяется короткий ответ на частичный HTTP-запрос. Метод отличается от первой таблицы и не затрагивает её список сайтов.</p>
 <div class="sc-toolbar">
- <button class="cbi-button cbi-button-action" id="sc-zm-run">Проверить сайты (метод Zapret Manager)</button>
  <span id="sc-zm-message"></span>
 </div>
 <div class="cbi-section"><table class="sc-table">
@@ -54,7 +51,7 @@
 <script>
 (function(){
 "use strict";
-var base="<%=url('admin/services/sitecheck')%>",authToken="<%=token%>",domains=[],busy=false,timer=null,zmBusy=false;
+var base="<%=url('admin/services/sitecheck')%>",authToken="<%=token%>",domains=[],busy=false;
 var defaults=[
  {name:"YouTube",domain:"https://www.youtube.com/"},
  {name:"WhatsApp",domain:"https://web.whatsapp.com/"},
@@ -93,32 +90,28 @@ function renderZapret(results){
  });
 }
 function check(){
- if(busy||!domains.length)return;busy=true;$("sc-run").disabled=true;msg("Проверка…");
- req("check",{domains:JSON.stringify(domains)}).then(function(d){render(d.results||[],d.checked_at);msg("Готово")})
- .catch(function(e){msg("Ошибка: "+e.message)})
+ if(busy||!domains.length)return;
+ busy=true;$("sc-run").disabled=true;msg("Проверка обеих таблиц…");$("sc-zm-message").textContent="Проверка…";
+ Promise.all([
+  req("check",{domains:JSON.stringify(domains)}),
+  req("check_zapret",{})
+ ]).then(function(all){
+  var d=all[0],z=all[1];
+  render(d.results||[],d.checked_at);
+  renderZapret(z.results||[]);
+  msg("Первая таблица: "+(d.results||[]).filter(function(x){return x.ok}).length+"/"+(d.results||[]).length+" доступно");
+  $("sc-zm-message").textContent="Вторая таблица: "+(z.results||[]).filter(function(x){return x.ok}).length+"/"+(z.results||[]).length+" доступно • "+(z.checked_at||new Date().toLocaleTimeString());
+ }).catch(function(e){msg("Ошибка: "+e.message);$("sc-zm-message").textContent="Проверка завершилась с ошибкой: "+e.message})
  .finally(function(){busy=false;$("sc-run").disabled=false});
 }
-function setAutoRefresh(enabled){if(timer)clearInterval(timer);timer=enabled?setInterval(check,60000):null}
-function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);$("sc-auto").checked=d.auto_refresh===true||d.auto_refresh==="1";setAutoRefresh($("sc-auto").checked)})}
-function checkZapret(){
- if(zmBusy)return;zmBusy=true;$("sc-zm-run").disabled=true;$("sc-zm-message").textContent="Проверка…";
- req("check_zapret",{}).then(function(d){
-  renderZapret(d.results||[]);
-  var passed=(d.results||[]).filter(function(x){return x.ok}).length;
-  $("sc-zm-message").textContent="Результат: "+passed+"/"+(d.results||[]).length+" • "+(d.checked_at||new Date().toLocaleTimeString());
- }).catch(function(e){$("sc-zm-message").textContent="Ошибка: "+e.message})
- .finally(function(){zmBusy=false;$("sc-zm-run").disabled=false});
-}
-$("sc-run").addEventListener("click",check);
+function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2)})}
 $("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
 $("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.parse($("sc-editor").value)}catch(e){msg("Ошибка JSON: "+e.message);return}
  if(!Array.isArray(parsed)||parsed.length<1||parsed.length>30){msg("Нужно от 1 до 30 сайтов");return}
- req("save_config",{domains:JSON.stringify(parsed)}).then(function(){domains=parsed;msg("Сохранено");check()}).catch(function(e){msg("Ошибка сохранения: "+e.message)});
+ req("save_config",{domains:JSON.stringify(parsed)}).then(function(){domains=parsed;msg("Сохранено")}).catch(function(e){msg("Ошибка сохранения: "+e.message)});
 });
 $("sc-reset").addEventListener("click",function(){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Нажмите «Сохранить список» для применения")});
-$("sc-save-auto").addEventListener("click",function(){var enabled=$("sc-auto").checked;req("save_settings",{auto_refresh:enabled?"1":"0"}).then(function(){setAutoRefresh(enabled);msg(enabled?"Автообновление включено и сохранено":"Автообновление выключено и сохранено")}).catch(function(e){msg("Ошибка сохранения параметра: "+e.message)})});
-$("sc-zm-run").addEventListener("click",checkZapret);
-load().then(check).catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message);check()});
+load().catch(function(e){domains=defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);msg("Не удалось загрузить настройки: "+e.message)});
 })();
 </script>
 <%+footer%>
