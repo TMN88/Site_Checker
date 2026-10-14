@@ -15,6 +15,21 @@ trap 'exit 1' HUP INT TERM
 
 # Static URLs used by the upstream System-tab checker.
 cat > "$LIST" <<'SITECHECK_URLS'
+# The same default sites as Site_Checker's first table, plus requested sites.
+youtube.com|https://www.youtube.com/
+WhatsApp|https://web.whatsapp.com/
+Telegram|https://web.telegram.org/
+TikTok|https://www.tiktok.com/
+ChatGPT|https://chatgpt.com/
+facebook.com|https://facebook.com
+ntc.party|https://ntc.party/
+openwrt.org|https://openwrt.org
+downloads.openwrt.org|https://downloads.openwrt.org
+play.google.com|https://play.google.com
+githubusercontent.com|https://raw.githubusercontent.com/StressOzz/Zapret-Manager/refs/heads/main/Zapret-Manager.sh
+rutracker.org|https://rutracker.org
+gosuslugi.ru|https://www.gosuslugi.ru
+nalog.ru|https://nalog.ru
 gosuslugi.ru|https://www.gosuslugi.ru
 esia.gosuslugi.ru|https://esia.gosuslugi.ru
 nalog.ru|https://nalog.ru
