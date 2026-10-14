@@ -43,7 +43,8 @@ BANNER
   printf '%s\n' "$C_RESET"
 }
 
-banner\n[ "$(id -u)" = "0" ] || die "Запусти этот скрипт от root."
+banner
+[ "$(id -u)" = "0" ] || die "Запусти этот скрипт от root."
 [ -r /etc/openwrt_release ] || die "Этот скрипт предназначен для OpenWrt."
 . /etc/openwrt_release
 REL="${DISTRIB_RELEASE:-unknown}"
@@ -108,7 +109,8 @@ if [ -z "$PM" ]; then
   else die "Не найден менеджер пакетов apk или opkg."; fi
 fi
 
-# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.\nstep "Проверка и установка зависимостей"\n# Install dependencies with the package manager native to this OpenWrt branch
+# Устанавливаем зависимости через штатный менеджер пакетов OpenWrt.\nstep "Проверка и установка зависимостей"
+# Install dependencies with the package manager native to this OpenWrt branch
 # (apk for OpenWrt 25.12+, opkg for OpenWrt 24.10).
 if [ "$PM" = apk ]; then
   MISSING=""
@@ -135,7 +137,8 @@ else
   fi
 fi
 
-step "Загрузка и проверка файлов Site Checker"\nmkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck \
+step "Загрузка и проверка файлов Site Checker"
+mkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck \
   /usr/libexec /etc/config
 trap 'rm -rf "$TMP"' EXIT
 trap 'exit 1' HUP INT TERM
@@ -156,7 +159,8 @@ done
 grep -q '^module("luci.controller.sitecheck"' "$TMP/sitecheck.lua" || die "Загруженный контроллер не распознан."
 grep -q '^config sitecheck' "$TMP/sitecheck.conf" || die "Конфигурация сайта не прошла проверку содержимого."
 
-step "Установка файлов LuCI и проверяющих модулей"\ncp "$TMP/sitecheck.lua" "$CTRL"; chmod 0644 "$CTRL"
+step "Установка файлов LuCI и проверяющих модулей"
+cp "$TMP/sitecheck.lua" "$CTRL"; chmod 0644 "$CTRL"
 cp "$TMP/index.htm" "$VIEW"; chmod 0644 "$VIEW"
 cp "$TMP/sitecheck-check" "$HELPER"; chmod 0755 "$HELPER"
 cp "$TMP/sitecheck-check-zapret" "$ZAPRET_HELPER"; chmod 0755 "$ZAPRET_HELPER"
@@ -167,8 +171,11 @@ else
   log "Существующий $CONF сохранён без изменений."
 fi
 
+step "Обновление интерфейса LuCI"
 rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
 [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
 [ ! -x /etc/init.d/uhttpd ] || /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
-log "Установка завершена. Открой LuCI → Services → Site_Checker."
-log "Для удаления Site_Checker запусти install.sh с аргументом --uninstall; конфигурация сайтов сохраняется."
+ok "Site Checker успешно установлен."
+printf '\n%sСледующий шаг:%s открой LuCI → Services → Site_Checker\n' "$C_BOLD" "$C_RESET"
+log "Удаление: sh install.sh --uninstall"
+log "Конфигурация сайтов в /etc/config/sitecheck при удалении сохраняется."
