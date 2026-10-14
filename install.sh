@@ -16,31 +16,31 @@ TMP="/tmp/site-checker.$"
 
 # Цветной вывод включается только в интерактивном терминале.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  C_RESET="$(printf '\\033[0m')"
-  C_CYAN="$(printf '\\033[36m')"
-  C_GREEN="$(printf '\\033[32m')"
-  C_YELLOW="$(printf '\\033[33m')"
-  C_RED="$(printf '\\033[31m')"
-  C_BOLD="$(printf '\\033[1m')"
+  C_RESET="$(printf '\033[0m')"
+  C_CYAN="$(printf '\033[36m')"
+  C_GREEN="$(printf '\033[32m')"
+  C_YELLOW="$(printf '\033[33m')"
+  C_RED="$(printf '\033[31m')"
+  C_BOLD="$(printf '\033[1m')"
 else
   C_RESET=""; C_CYAN=""; C_GREEN=""; C_YELLOW=""; C_RED=""; C_BOLD=""
 fi
 
-log()  { printf '%s[Site Checker]%s %s\\n' "$C_CYAN" "$C_RESET" "$*"; }
-ok()   { printf '%s[  OK  ]%s %s\\n' "$C_GREEN" "$C_RESET" "$*"; }
-warn() { printf '%s[ ВНИМАНИЕ ]%s %s\\n' "$C_YELLOW" "$C_RESET" "$*"; }
-die()  { printf '%s[ ОШИБКА ]%s %s\\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
-step() { printf '\\n%s==>%s %s\\n' "$C_BOLD" "$C_RESET" "$*"; }
+log()  { printf '%s[Site Checker]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+ok()   { printf '%s[  OK  ]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+warn() { printf '%s[ ВНИМАНИЕ ]%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+die()  { printf '%s[ ОШИБКА ]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
+step() { printf '\n%s==>%s %s\n' "$C_BOLD" "$C_RESET" "$*"; }
 
 banner() {
-  printf '\\n%s' "$C_CYAN"
+  printf '\n%s' "$C_CYAN"
   cat <<'BANNER'
   ┌────────────────────────────────────────┐
   │           SITE CHECKER                  │
   │      Установка для OpenWrt / LuCI       │
   └────────────────────────────────────────┘
 BANNER
-  printf '%s\\n' "$C_RESET"
+  printf '%s\n' "$C_RESET"
 }
 
 banner\n[ "$(id -u)" = "0" ] || die "Запусти этот скрипт от root."
