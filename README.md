@@ -6,7 +6,7 @@ LuCI-панель для проверки доступности сайтов н
 
 - LuCI: **Services → Site_Checker**.
 - Первая таблица: стандартная проверка HTTP/HTTPS с текущей конфигурацией роутера.
-- Вторая таблица: проверка в стиле Zapret Manager — переходы по редиректам, запрос первых байтов, короткие таймауты и браузерный User-Agent. Основана на методе в [Zapret-Manager.sh](https://github.com/StressOzz/Zapret-Manager/blob/721c5c5367cc277007e7f60bb2f13b475e68d295/Zapret-Manager.sh).
+- Вторая таблица использует механизм из вкладки «Система» Zapret Manager: тот же список основных URL, обновляемый список доменов из `suite.v2.json`, параллельные запросы `curl`, следование редиректам, диапазон байтов `0–65535`, таймауты и User-Agent. Это адаптация блоков `_test_prepare_urls()` и `_si_sites()` из [ZapretManager_LuCI.sh](https://github.com/StressOzz/Zapret-Manager/blob/721c5c5367cc277007e7f60bb2f13b475e68d295/ZapretManager_LuCI.sh); сам Zapret и другие VPN-компоненты не устанавливаются.
 - Отображение статуса, задержки и HTTP-кода в обеих таблицах.
 - Редактирование списка первой таблицы до 30 URL.
 - Автообновление первой таблицы каждые 60 секунд выключено по умолчанию.
@@ -25,7 +25,7 @@ LuCI-панель для проверки доступности сайтов н
 Выполни по SSH от `root`:
 
 ```sh
-wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@5a7929065d7b65acd8b35f2b7ae31222385a85ae/install.sh' && sh /tmp/site-checker-install.sh
+wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@063f45b2652be575070bd6edc65447717a849d39/install.sh' && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой **LuCI → Services → Site_Checker**.

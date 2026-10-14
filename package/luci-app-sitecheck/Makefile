@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 LUCI_TITLE:=LuCI Site_Checker
 LUCI_DEPENDS:=+luci-base +curl
 PKG_NAME:=luci-app-sitecheck
-PKG_VERSION:=1.2.0
+PKG_VERSION:=1.3.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 
