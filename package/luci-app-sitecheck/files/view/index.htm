@@ -63,22 +63,6 @@ var defaults=[
  {name:"TikTok",domain:"https://www.tiktok.com/"},
  {name:"Discord",domain:"https://discord.com/"}
 ];
-var zmDefaults=[
- {name:"YouTube",domain:"https://www.youtube.com/"},
- {name:"YouTube images",domain:"https://i.ytimg.com/"},
- {name:"YouTube images CDN",domain:"https://i9.ytimg.com/"},
- {name:"YouTube API",domain:"https://youtubei.googleapis.com/"},
- {name:"Google APIs",domain:"https://googleapis.com/"},
- {name:"Googleusercontent",domain:"https://googleusercontent.com/"},
- {name:"YouTube video",domain:"https://manifest.googlevideo.com/"},
- {name:"Rutube",domain:"https://rutube.ru/"},
- {name:"Discord",domain:"https://discord.com/"},
- {name:"Instagram",domain:"https://instagram.com/"},
- {name:"Facebook",domain:"https://facebook.com/"},
- {name:"OpenWrt",domain:"https://openwrt.org/"},
- {name:"GitHub",domain:"https://github.com/"},
- {name:"Google Play",domain:"https://play.google.com/"}
-];
 function $(id){return document.getElementById(id)}
 function msg(s){$("sc-message").textContent=s||""}
 function req(path,data){
@@ -118,7 +102,7 @@ function setAutoRefresh(enabled){if(timer)clearInterval(timer);timer=enabled?set
 function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2);$("sc-auto").checked=d.auto_refresh===true||d.auto_refresh==="1";setAutoRefresh($("sc-auto").checked)})}
 function checkZapret(){
  if(zmBusy)return;zmBusy=true;$("sc-zm-run").disabled=true;$("sc-zm-message").textContent="Проверка…";
- req("check_zapret",{domains:JSON.stringify(zmDefaults)}).then(function(d){
+ req("check_zapret",{}).then(function(d){
   renderZapret(d.results||[]);
   var passed=(d.results||[]).filter(function(x){return x.ok}).length;
   $("sc-zm-message").textContent="Результат: "+passed+"/"+(d.results||[]).length+" • "+(d.checked_at||new Date().toLocaleTimeString());

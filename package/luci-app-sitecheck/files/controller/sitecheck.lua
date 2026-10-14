@@ -101,14 +101,35 @@ end
 
 function action_check_zapret()
     local http = require("luci.http")
-    local json = require("luci.jsonc")
-    local safe = decode_domains(http, json, 30)
-    if not safe then return end
-    local results = {}
-    for _, item in ipairs(safe) do
-        local ok, ms, code = run_check_script("/usr/libexec/sitecheck-check-zapret", item.domain)
-        results[#results + 1] = { name = item.name, domain = item.domain, ok = ok, latency_ms = ms, http_code = code }
+    local pipe = io.popen("/usr/libexec/sitecheck-system-sites 2>/dev/null")
+    local output = pipe and pipe:read("*a") or ""
+    local command_ok = false
+    if pipe then
+        local a, b, c = pipe:close()
+        command_ok = a == true
     end
+
+    local results = {}
+    for line in output:gmatch("[^\r\n]+") do
+        local idx, name, url, ok, ms, code = line:match("^(%d+)|([^|]+)|([^|]+)|([01])|(%d+)|(%d+)$")
+        if idx then
+            results[#results + 1] = {
+                name = name,
+                domain = url,
+                ok = ok == "1",
+                latency_ms = tonumber(ms),
+                http_code = tonumber(code)
+            }
+        end
+    end
+
+    if not command_ok and #results == 0 then
+        http.status(500, "Internal Server Error")
+        http.prepare_content("application/json")
+        http.write_json({ error = "Не удалось выполнить проверку Zapret Manager. Проверьте curl и права на /usr/libexec/sitecheck-system-sites." })
+        return
+    end
+
     http.prepare_content("application/json")
     http.write_json({ results = results, checked_at = os.date("%Y-%m-%d %H:%M:%S") })
 end

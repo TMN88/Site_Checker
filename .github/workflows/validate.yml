@@ -48,3 +48,7 @@ jobs:
           grep -q 'save_settings' files/controller/sitecheck.lua
           grep -q 'id="sc-zm-run"' files/view/index.htm
           grep -q 'check_zapret' files/controller/sitecheck.lua
+          grep -q 'curl -sL --connect-timeout 3 --max-time 5' files/sitecheck-check-zapret
+          grep -q 'suite.v2.json' files/sitecheck-system-sites
+          grep -q 'id="sc-zm-run"' files/view/index.htm
+          grep -q 'check_zapret' files/controller/sitecheck.lua
