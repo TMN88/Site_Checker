@@ -105,6 +105,7 @@ function check(){
  .finally(function(){busy=false;$("sc-run").disabled=false});
 }
 function load(){return fetch(base+"/get_config",{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){domains=d.domains||defaults.slice();$("sc-editor").value=JSON.stringify(domains,null,2)})}
+$("sc-run").addEventListener("click",check);
 $("sc-toggle").addEventListener("click",function(){var e=$("sc-editor-box");e.style.display=e.style.display==="none"?"block":"none"});
 $("sc-save").addEventListener("click",function(){var parsed;try{parsed=JSON.parse($("sc-editor").value)}catch(e){msg("Ошибка JSON: "+e.message);return}
  if(!Array.isArray(parsed)||parsed.length<1||parsed.length>30){msg("Нужно от 1 до 30 сайтов");return}
