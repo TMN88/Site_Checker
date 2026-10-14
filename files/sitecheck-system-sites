@@ -15,24 +15,30 @@ trap 'exit 1' HUP INT TERM
 
 # Static URLs used by the upstream System-tab checker.
 cat > "$LIST" <<'SITECHECK_URLS'
-gosuslugi.ru|https://www.gosuslugi.ru
-esia.gosuslugi.ru|https://esia.gosuslugi.ru
-nalog.ru|https://nalog.ru
-lkfl2.nalog.ru|https://lkfl2.nalog.ru
-rutube.ru|https://rutube.ru
+YouTube|https://www.youtube.com/
+WhatsApp|https://web.whatsapp.com/
+Telegram|https://web.telegram.org/
+Instagram|https://www.instagram.com/
+TikTok|https://www.tiktok.com/
+Discord|https://discord.com/
+ChatGPT|https://chatgpt.com/
+Facebook|https://facebook.com/
 ntc.party|https://ntc.party/
-instagram.com|https://instagram.com
-facebook.com|https://facebook.com
-rutracker.org|https://rutracker.org
-nnmclub.to|https://nnmclub.to
-rutor.info|https://rutor.info
-openwrt.org|https://openwrt.org
-discord.com|https://discord.com
-x.com|https://x.com
-forum.ru-board.com|https://forum.ru-board.com
-play.google.com|https://play.google.com
-downloads.openwrt.org|https://downloads.openwrt.org
-githubusercontent.com|https://raw.githubusercontent.com/StressOzz/Zapret-Manager/refs/heads/main/Zapret-Manager.sh
+OpenWrt|https://openwrt.org/
+OpenWrt downloads|https://downloads.openwrt.org/
+Google Play|https://play.google.com/
+GitHubusercontent|https://raw.githubusercontent.com/StressOzz/Zapret-Manager/refs/heads/main/Zapret-Manager.sh
+Rutracker|https://rutracker.org/
+Gosuslugi|https://www.gosuslugi.ru/
+Nalog|https://nalog.ru/
+esia.gosuslugi.ru|https://esia.gosuslugi.ru
+lkfl2.nalog.ru|https://lkfl2.nalog.ru
+Rutube|https://rutube.ru/
+Instagram|https://instagram.com/
+nnmclub.to|https://nnmclub.to/
+rutor.info|https://rutor.info/
+x.com|https://x.com/
+forum.ru-board.com|https://forum.ru-board.com/
 SITECHECK_URLS
 
 # The upstream System checker adds hosts from this live JSON source.
