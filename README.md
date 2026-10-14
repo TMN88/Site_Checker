@@ -20,14 +20,16 @@ LuCI-панель для проверки доступности сайтов н
 - **OpenWrt 24.10.x** — установщик использует `opkg`.
 - **OpenWrt 25.12.x** — установщик использует `apk`.
 
-Совместимость с кастомными сборками и всеми устройствами отдельно не подтверждена.
+Установщик проверяет и при необходимости устанавливает `luci-lua-runtime` вместе с зависимостями через штатный пакетный менеджер. Он нужен, потому что интерфейс приложения пока использует Lua-контроллер LuCI. Устанавливаются пакеты из настроенных на роутере feeds; не смешивайте feeds разных выпусков OpenWrt.
+
+Совместимость с кастомными сборками, нестандартными feeds и каждой архитектурой отдельно не подтверждена. Если в feeds конкретной сборки нет `luci-lua-runtime`, установщик остановится с сообщением об ошибке, а не будет автоматически менять версию LuCI.
 
 ## Установка
 
 Выполни по SSH от `root`:
 
 ```sh
-wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@e1b0425f16170b47efa1716f83deab5f58f71eba/install.sh' && sh /tmp/site-checker-install.sh
+wget -O /tmp/site-checker-install.sh 'https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@d4f19865f451f47c3355a31b17fade8ddd326950/install.sh' && sh /tmp/site-checker-install.sh
 ```
 
 После установки открой **LuCI → Services → Site_Checker**.
