@@ -12,7 +12,7 @@ HELPER="/usr/libexec/sitecheck-check"
 ZAPRET_HELPER="/usr/libexec/sitecheck-check-zapret"
 ZAPRET_SITES="/usr/libexec/sitecheck-system-sites"
 CONF="/etc/config/sitecheck"
-TMP="/tmp/site-checker.$"
+TMP="/tmp/site-checker.$$"
 
 # Цветной вывод включается только в интерактивном терминале.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
