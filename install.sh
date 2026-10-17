@@ -18,11 +18,11 @@ TMP="/tmp/site-checker.$$"
 # Цветной вывод включается только в интерактивном терминале.
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   C_RESET="$(printf '\033[0m')"
-  C_CYAN="$(printf '\033[36m')"
-  C_GREEN="$(printf '\033[32m')"
-  C_YELLOW="$(printf '\033[33m')"
-  C_RED="$(printf '\033[31m')"
-  C_BOLD="$(printf '\033[1m')"
+  C_CYAN="$(printf '\033[96m')"
+  C_GREEN="$(printf '\033[92m')"
+  C_YELLOW="$(printf '\033[93m')"
+  C_RED="$(printf '\033[91m')"
+  C_BOLD="$(printf '\033[95m')"
 else
   C_RESET=""; C_CYAN=""; C_GREEN=""; C_YELLOW=""; C_RED=""; C_BOLD=""
 fi
