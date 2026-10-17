@@ -2,7 +2,10 @@ module("luci.controller.sitecheck", package.seeall)
 
 function index()
     if not nixio.fs.access("/usr/libexec/sitecheck-check") then return end
-    entry({"admin", "services", "sitecheck"}, template("sitecheck/index"), _("Site_Checker"), 85).dependent = true
+    -- Register the menu parent separately from the display endpoint. This lets
+    -- modern LuCI menu.d JSON point at a stable child route on OpenWrt 25.12.
+    entry({"admin", "services", "sitecheck"}, firstchild(), _("Site_Checker"), 85).dependent = true
+    entry({"admin", "services", "sitecheck", "display"}, template("sitecheck/index"), _("Site_Checker"), 1).leaf = true
     entry({"admin", "services", "sitecheck", "check"}, call("action_check")).leaf = true
     entry({"admin", "services", "sitecheck", "check_zapret"}, call("action_check_zapret")).leaf = true
     entry({"admin", "services", "sitecheck", "get_config"}, call("action_get_config")).leaf = true
