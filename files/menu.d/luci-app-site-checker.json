@@ -1,0 +1,15 @@
+{
+  "admin/services/sitecheck": {
+    "title": "Site_Checker",
+    "order": 85,
+    "action": {
+      "type": "alias",
+      "path": "admin/services/sitecheck/display"
+    },
+    "depends": {
+      "fs": {
+        "/usr/libexec/sitecheck-check": "executable"
+      }
+    }
+  }
+}
