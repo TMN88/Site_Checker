@@ -38,7 +38,7 @@ banner() {
   cat <<'BANNER'
   +----------------------------------------+
   |              SITE CHECKER              |
-  |      Установка для OpenWrt / LuCI       |
+  |      Установка для OpenWrt / LuCI      |
   +----------------------------------------+
 BANNER
   printf '%s\n' "$C_RESET"
