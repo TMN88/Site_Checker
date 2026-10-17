@@ -4,13 +4,14 @@ set -eu
 
 # Pinned source revision, deliberately using jsDelivr rather than raw.githubusercontent.com
 # because some routers/networks have returned stale cached raw files.
-BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@a8a70be57225827740996d41b540b8a4b7ac20b0"
+BASE="https://cdn.jsdelivr.net/gh/TMN88/Site_Checker@e7e461ef1696fe23502cda07745232e01ef812f6"
 
 CTRL="/usr/lib/lua/luci/controller/sitecheck.lua"
 VIEW="/usr/lib/lua/luci/view/sitecheck/index.htm"
 HELPER="/usr/libexec/sitecheck-check"
 ZAPRET_HELPER="/usr/libexec/sitecheck-check-zapret"
 ZAPRET_SITES="/usr/libexec/sitecheck-system-sites"
+MENU_JSON="/usr/share/luci/menu.d/luci-app-site-checker.json"
 CONF="/etc/config/sitecheck"
 TMP="/tmp/site-checker.$$"
 
@@ -90,8 +91,8 @@ cleanup_managed_failover() {
 
 remove_app() {
   cleanup_managed_failover
-  rm -f "$CTRL" "$VIEW" "$HELPER" "$ZAPRET_HELPER" "$ZAPRET_SITES"
-  rm -f /tmp/luci-indexcache /tmp/luci-modulecache/* 2>/dev/null || true
+  rm -f "$CTRL" "$VIEW" "$HELPER" "$ZAPRET_HELPER" "$ZAPRET_SITES" "$MENU_JSON"
+  rm -f /tmp/luci-indexcache /tmp/luci-indexcache.* /tmp/luci-modulecache/* 2>/dev/null || true
   [ ! -x /etc/init.d/rpcd ] || /etc/init.d/rpcd reload >/dev/null 2>&1 || true
   [ ! -x /etc/init.d/uhttpd ] || /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
   log "Site_Checker удалён; конфигурация $CONF сохранена."
@@ -149,7 +150,7 @@ fi
 
 step "Загрузка и проверка файлов Site Checker"
 mkdir -p "$TMP" /usr/lib/lua/luci/controller /usr/lib/lua/luci/view/sitecheck \
-  /usr/libexec /etc/config
+  /usr/libexec /usr/share/luci/menu.d /etc/config
 trap 'rm -rf "$TMP"' EXIT
 trap 'exit 1' HUP INT TERM
 
@@ -158,15 +159,18 @@ fetch "$BASE/files/view/index.htm" "$TMP/index.htm" || die "Не удалось 
 fetch "$BASE/files/sitecheck-check" "$TMP/sitecheck-check" || die "Не удалось загрузить проверяющий скрипт."
 fetch "$BASE/files/sitecheck-check-zapret" "$TMP/sitecheck-check-zapret" || die "Не удалось загрузить дополнительный проверяющий скрипт."
 fetch "$BASE/files/sitecheck-system-sites" "$TMP/sitecheck-system-sites" || die "Не удалось загрузить список и запускатель проверки Zapret Manager."
+fetch "$BASE/files/menu.d/luci-app-site-checker.json" "$TMP/luci-app-site-checker.json" || die "Не удалось загрузить запись меню LuCI."
 fetch "$BASE/files/sitecheck.conf" "$TMP/sitecheck.conf" || die "Не удалось загрузить конфигурацию по умолчанию."
 
-for f in sitecheck.lua index.htm sitecheck-check sitecheck-check-zapret sitecheck-system-sites sitecheck.conf; do
+for f in sitecheck.lua index.htm sitecheck-check sitecheck-check-zapret sitecheck-system-sites luci-app-site-checker.json sitecheck.conf; do
   [ -s "$TMP/$f" ] || die "Загружен пустой файл: $f"
 done
 /bin/sh -n "$TMP/sitecheck-check" || die "Синтаксическая ошибка в sitecheck-check."
 /bin/sh -n "$TMP/sitecheck-check-zapret" || die "Синтаксическая ошибка в sitecheck-check-zapret."
 /bin/sh -n "$TMP/sitecheck-system-sites" || die "Синтаксическая ошибка в sitecheck-system-sites."
 grep -q '^module("luci.controller.sitecheck"' "$TMP/sitecheck.lua" || die "Загруженный контроллер не распознан."
+grep -q '"admin/services/sitecheck"' "$TMP/luci-app-site-checker.json" || die "Запись меню LuCI не прошла проверку содержимого."
+grep -q '"path": "admin/services/sitecheck/display"' "$TMP/luci-app-site-checker.json" || die "В записи меню не найден маршрут отображения Site Checker."
 grep -q '^config sitecheck' "$TMP/sitecheck.conf" || die "Конфигурация сайта не прошла проверку содержимого."
 
 step "Установка файлов LuCI и проверяющих модулей"
@@ -175,6 +179,7 @@ cp "$TMP/index.htm" "$VIEW"; chmod 0644 "$VIEW"
 cp "$TMP/sitecheck-check" "$HELPER"; chmod 0755 "$HELPER"
 cp "$TMP/sitecheck-check-zapret" "$ZAPRET_HELPER"; chmod 0755 "$ZAPRET_HELPER"
 cp "$TMP/sitecheck-system-sites" "$ZAPRET_SITES"; chmod 0755 "$ZAPRET_SITES"
+cp "$TMP/luci-app-site-checker.json" "$MENU_JSON"; chmod 0644 "$MENU_JSON"
 if [ ! -f "$CONF" ]; then
   cp "$TMP/sitecheck.conf" "$CONF"; chmod 0644 "$CONF"
 else
